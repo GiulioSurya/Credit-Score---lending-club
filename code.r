@@ -27,8 +27,11 @@ dati_cor<-dati[,sapply(dati,is.numeric)]
 M <- cor(dati_cor,use="complete.obs")
 corrplot(M, type="upper", order="hclust",method="number",number.cex=0.5,addCoef.col = "black",tl.cex = 0.5)
 
-}
-
 save(dati, file = "dati.RData")
 write.csv(dati, file = "dati.csv")
+}
 
+dati<-read.csv("dati.csv") 
+#delete observation with NA
+sum(!complete.cases(dati)) #number of NA: 21171
+dati<-dati[complete.cases(dati),]
