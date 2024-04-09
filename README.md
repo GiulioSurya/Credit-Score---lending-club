@@ -7,4 +7,4 @@ This project focuses on analyzing and predicting credit scores using data source
 
 
 
-[road map](https://www.notion.so/non-RAP-ma-TRAPin-e571add7fe0147a6800105222d8f2b54)
+[road map](https://habitual-bicycle-fee.notion.site/non-RAP-ma-TRAPin-e571add7fe0147a6800105222d8f2b54?pvs=4)
