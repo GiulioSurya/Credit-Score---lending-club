@@ -53,15 +53,15 @@ train<-sample(1:nrow(dati),0.7*nrow(dati))
 test<-setdiff(1:nrow(dati),train)
 fit<-lm(loan_status_binary~annual_inc+funded_amnt+grade,data=dati[train,])
 summary(fit)
-#i want to set a treeshold for the prediction, i.e. if the probability of the loan to be in default is >0.5 then the loan is in default
+#set a treeshold for the prediction, i.e. if the probability of the loan to be in default is >0.5 then the loan is in default
 pred<-predict(fit,newdata=dati[test,],type="response")
 pred<-ifelse(pred>0.14,1,0)
-#i want a confusion matrix
+# create confusion matrix
 table(pred,dati[test,]$loan_status_binary)
-#i want the accuracy
+#evaluate accuracy
 sum(diag(table(pred,dati[test,]$loan_status_binary)))/sum(table(pred,dati[test,]$loan_status_binary))
 
-# want to optimize accuracy with roc curve
+# need to optimize the treeshold
 library(pROC)
 testRoc<-roc(dati$loan_status_binary ~ dati$annual_inc+dati$funded_amnt, plot=T, print.auc=T)
 coords(testRoc, x="best")
