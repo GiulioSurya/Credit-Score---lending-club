@@ -31,7 +31,41 @@ save(dati, file = "dati.RData")
 write.csv(dati, file = "dati.csv")
 }
 
-dati<-read.csv("dati.csv") 
 #delete observation with NA
 sum(!complete.cases(dati)) #number of NA: 21171
 dati<-dati[complete.cases(dati),]
+
+dati<-read.csv("dati.csv")
+
+#transform the target categorical variable in a binary variable, 1 if the loan is in "Charged Off", "Default", "Does not meet the credit policy. Status:Charged Off",
+#"In Grace Period", "Late (16-30 days)", "Late (31-120 days)", 0 otherwise
+dati$loan_status_binary<-ifelse(dati$loan_status %in% c("Charged Off", "Default", "Does not meet the credit policy. Status:Charged Off",
+"In Grace Period", "Late (16-30 days)", "Late (31-120 days)"),1,0)
+
+#check
+sum(dati$loan_status %in% c("Charged Off", "Default", "Does not meet the credit policy. Status:Charged Off",
+"In Grace Period", "Late (16-30 days)", "Late (31-120 days)"))
+table(dati$loan_status_binary)
+
+
+#linear model
+train<-sample(1:nrow(dati),0.7*nrow(dati))
+test<-setdiff(1:nrow(dati),train)
+fit<-lm(loan_status_binary~annual_inc+funded_amnt+grade,data=dati[train,])
+summary(fit)
+#i want to set a treeshold for the prediction, i.e. if the probability of the loan to be in default is >0.5 then the loan is in default
+pred<-predict(fit,newdata=dati[test,],type="response")
+pred<-ifelse(pred>0.14,1,0)
+#i want a confusion matrix
+table(pred,dati[test,]$loan_status_binary)
+#i want the accuracy
+sum(diag(table(pred,dati[test,]$loan_status_binary)))/sum(table(pred,dati[test,]$loan_status_binary))
+
+# want to optimize accuracy with roc curve
+library(pROC)
+testRoc<-roc(dati$loan_status_binary ~ dati$annual_inc+dati$funded_amnt, plot=T, print.auc=T)
+coords(testRoc, x="best")
+
+summary(dati$annual_inc)
+View(head(dati))
+
