@@ -4,6 +4,7 @@ library(caret)
 library(pROC)
 library(car)
 library(leaps)
+library(corrplot)
 
 load("dati.RData")
 
@@ -26,7 +27,7 @@ corrplot(cor(dati_fit[, sapply(dati_fit, is.numeric)]), method = "circle", type 
 #deleted for elena and jack --> "dti" ,"application_type","tot_coll_amt","pct_tl_nvr_dlq","pub_rec_bankruptcies","tax_liens",,"total_bc_limit"
 #"home_ownership","tot_hi_cred_lim","num_tl_90g_dpd_24m"
 
-# #this data are used to create traoin test and validation with 100k obs
+# #this data are used to create train test and validation with 100k obs
 
 set.seed(1)
 #i want to select a sub sample of the data of 300k observation
