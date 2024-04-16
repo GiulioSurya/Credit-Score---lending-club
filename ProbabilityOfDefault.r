@@ -16,17 +16,15 @@ load("dati.RData")
     #                              "num_rev_accts","num_tl_90g_dpd_24m","pct_tl_nvr_dlq",
      #                             "pub_rec_bankruptcies","tax_liens","tot_hi_cred_lim","total_bc_limit","default"))
 
-dati_fit<-subset(dati, select = c("funded_amnt","term","int_rate","home_ownership",
-                                  "annual_inc","dti","fico_range_low","open_acc","revol_util","out_prncp",
-                                  "total_pymnt","total_rec_int","application_type","tot_coll_amt", "tot_cur_bal",
-                                  "open_il_24m","avg_cur_bal","bc_util","chargeoff_within_12_mths","mort_acc",
-                                  "num_tl_90g_dpd_24m","pct_tl_nvr_dlq",
-                                  "pub_rec_bankruptcies","tax_liens","tot_hi_cred_lim","total_bc_limit","default"))
+dati_fit<-subset(dati, select = c("funded_amnt","term","int_rate",
+                                  "annual_inc","fico_range_low","open_acc","revol_util","out_prncp",
+                                  "total_pymnt","total_rec_int", "tot_cur_bal",
+                                  "open_il_24m","avg_cur_bal","bc_util","chargeoff_within_12_mths","mort_acc","default"))
 cor<-cor(dati_fit[, sapply(dati_fit, is.numeric)])
 corrplot(cor(dati_fit[, sapply(dati_fit, is.numeric)]), method = "circle", type = "lower", tl.col = "black", tl.srt = 45, diag = FALSE)
 
-
-
+#deleted for elena and jack --> "dti" ,"application_type","tot_coll_amt","pct_tl_nvr_dlq","pub_rec_bankruptcies","tax_liens",,"total_bc_limit"
+#"home_ownership","tot_hi_cred_lim","num_tl_90g_dpd_24m"
 
 # #this data are used to create traoin test and validation with 100k obs
 
@@ -86,12 +84,26 @@ threshold[which(sensitivity==max(sensitivity))]
 
 table(pred2,dati_fit[validation,]$default)
 
-
-
+{
+#i want to find the threshold that optimize f1 score
+threshold<-seq(0.01,0.30,0.01)
+f1<-rep(0,length(threshold))
+sensitivity<-rep(0,length(threshold))
+precision<-rep(0,length(threshold))
+for (i in seq_along(threshold)) {
+  pred_thre <- predict(fit, newdata = dati_fit[validation, ], type = "response")
+  pred2 <- ifelse(pred_thre > threshold[i], 1, 0)
+  sensitivity[i] <- table(pred2, dati_fit[validation, ]$default)[2,2] / sum(table(pred2, dati_fit[validation, ]$default)[,2])
+  precision[i]<-table(pred2,dati_fit[validation,]$default)[2,2]/sum(table(pred2,dati_fit[validation,]$default)[2,])
+  f1[i]<-2*(precision[i]*sensitivity[i])/(precision[i]+sensitivity[i])
+}
+max(f1)
+threshold[which(f1==max(f1))]
+}
 #now i try to calculate the accuracy on test data using this threshold
 pred2<-predict(fit,newdata=dati_fit[test,],type="response")
 #set the treeshold
-pred2<-ifelse(pred2>0.1,1,0)
+pred2<-ifelse(pred2>0.22,1,0)
 # create confusion matrix
 table(pred2,dati_fit[test,]$default)
 #evaluate accuracy
