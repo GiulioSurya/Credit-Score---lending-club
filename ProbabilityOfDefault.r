@@ -29,7 +29,7 @@ corrplot(cor(dati_fit[, sapply(dati_fit, is.numeric)]), method = "circle", type 
 
 
 
-# #this data are used to create traoin test and validation with 100k obs
+# #this data are used to create train test and validation with 100k obs
 
 set.seed(1)
 #i want to select a sub sample of the data of 300k observation
