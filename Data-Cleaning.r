@@ -60,14 +60,12 @@ dati%>%group_by(default)%>%summarize(count = n(), rel_count = count/nrow(dati)) 
 #->class imbalance: the class labeled as '0' constitutes 88% of the dataset
 
 #Creating a new variable based on the ratio between the funded amount and the total payment
-dati$funded_amnt_ratio<-dati$funded_amnt/dati$total_pymnt
-summary(dati$funded_amnt_ratio)
-view(dati[,c("total_pymnt","funded_amnt","funded_amnt_ratio","default")])
-plot(dati$funded_amnt_ratio,dati$default,xlim=c(0,10))
+#dati$funded_amnt_ratio<-dati$funded_amnt/dati$total_pymnt
+#summary(dati$funded_amnt_ratio)
+#view(dati[,c("total_pymnt","funded_amnt","funded_amnt_ratio","default")])
+#plot(dati$funded_amnt_ratio,dati$default,xlim=c(0,10))
 #->this variabile can be usefull
 }
-
-save(dati, file = "dati.RData")
 
 #INCOME
 plot(dati$annual_inc)
@@ -98,12 +96,15 @@ prop.table(table(dati$grade, dati$default), 1)
 #-> more default with lower grade
 
 #HOME OWNERSHIP
+
 table(dati$home_ownership, dati$default)
-dati <- subset(dati, home_ownership != "NONE" & home_ownership != "ANY")
-# Remove unused levels from the home_ownership factor
+dati <- subset(dati, home_ownership != "NONE")
+#just 3 obs
+table(dati$home_ownership)# Remove unused levels from the home_ownership factor
 dati$home_ownership <- droplevels(dati$home_ownership) 
 prop.table(table(dati$home_ownership, dati$default), 1)
 table(dati$home_ownership)
+
 
 #Analyzing default distribution based on income among individuals with home_ownership=="MORTGAGE"
 plot(log(dati$annual_inc[dati$home_ownership=="MORTGAGE"]),dati$default[dati$home_ownership=="MORTGAGE"])
@@ -225,6 +226,11 @@ dati <- subset(dati, total_bc_limit <= 800000) #delete outliers
 plot(dati$total_bc_limit,dati$default)
 # same behavior of tot_hi_cred_lim
 
+#out_prncp = outstanding principal amount for the loan
+plot(dati$out_prncp)
+plot(dati_fit$out_prncp,dati_fit$default)
+#really important
+
 #DEBT_SETTLEMENT_FLAG = whether or not the borrower, who has charged-off, 
 #is working with a debt-settlement company.
 unique(dati$debt_settlement_flag)
@@ -233,17 +239,9 @@ table(dati$default, dati$debt_settlement_flag)
 prop.table(table(dati$debt_settlement_flag, dati$loan_status), 1)
 # basically all the observation with default=1 have flag -> no really important
 
-#creating a subset:
-dati_fit<-subset(dati, select = c("funded_amnt","term","int_rate","emp_length","home_ownership",
-                                  "annual_inc","purpose","dti","fico_range_low","open_acc","revol_util","out_prncp",
-                                  "total_pymnt","total_rec_int","application_type","tot_coll_amt", "tot_cur_bal",
-                                  "open_il_24m","avg_cur_bal","bc_util","chargeoff_within_12_mths","delinq_amnt","mort_acc",
-                                  "num_rev_accts","num_tl_90g_dpd_24m","pct_tl_nvr_dlq","percent_bc_gt_75",
-                                  "pub_rec_bankruptcies","tax_liens","tot_hi_cred_lim","total_bc_limit","default"))
-cor<-cor(dati_fit[, sapply(dati_fit, is.numeric)])
-corrplot(cor(dati_fit[, sapply(dati_fit, is.numeric)]), method = "circle", type = "lower", tl.col = "black", tl.srt = 45, diag = FALSE)
+save(dati, file = "dati.RData")
 
-save(dati_fit, file = "dati_fit.RData")
-#load("dati_fit.RData")
+
+
 
 
