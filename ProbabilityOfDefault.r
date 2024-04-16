@@ -17,17 +17,24 @@ load("dati.RData")
     #                              "num_rev_accts","num_tl_90g_dpd_24m","pct_tl_nvr_dlq",
      #                             "pub_rec_bankruptcies","tax_liens","tot_hi_cred_lim","total_bc_limit","default"))
 
-dati_fit<-subset(dati, select = c("funded_amnt","term","int_rate",
-                                  "annual_inc","fico_range_low","open_acc","revol_util","out_prncp",
-                                  "total_pymnt","total_rec_int", "tot_cur_bal",
-                                  "open_il_24m","avg_cur_bal","bc_util","chargeoff_within_12_mths","mort_acc","default"))
-cor<-cor(dati_fit[, sapply(dati_fit, is.numeric)])
-corrplot(cor(dati_fit[, sapply(dati_fit, is.numeric)]), method = "circle", type = "lower", tl.col = "black", tl.srt = 45, diag = FALSE)
-
+#dati_fit<-subset(dati, select = c("funded_amnt","term","int_rate",
+   #                               "annual_inc","fico_range_low","open_acc","revol_util","out_prncp",
+     #                             "total_pymnt","total_rec_int", "tot_cur_bal",
+       #                           "open_il_24m","avg_cur_bal","bc_util","chargeoff_within_12_mths","mort_acc","default"))
 #deleted for elena and jack --> "dti" ,"application_type","tot_coll_amt","pct_tl_nvr_dlq","pub_rec_bankruptcies","tax_liens",,"total_bc_limit"
 #"home_ownership","tot_hi_cred_lim","num_tl_90g_dpd_24m"
 
-# #this data are used to create train test and validation with 100k obs
+#i try to eliminate non-significative variables in the logit model with 17 variables
+#i deleted from giulio's model: annual inc, open_il_24m, bc_util, chargeoff_within_12_mths, mort_acc
+#here i got 12 variables
+dati_fit<-subset(dati, select = c("funded_amnt","term","int_rate",
+                                  "fico_range_low","open_acc","revol_util","out_prncp",
+                                  "total_pymnt","total_rec_int", "tot_cur_bal",
+                                  "avg_cur_bal","default"))
+cor<-cor(dati_fit[, sapply(dati_fit, is.numeric)])
+corrplot(cor(dati_fit[, sapply(dati_fit, is.numeric)]), method = "circle", type = "lower", tl.col = "black", tl.srt = 45, diag = FALSE)
+
+#this data are used to create train test and validation with 100k obs
 
 set.seed(1)
 #i want to select a sub sample of the data of 300k observation
@@ -104,7 +111,7 @@ threshold[which(f1==max(f1))]
 #now i try to calculate the accuracy on test data using this threshold
 pred2<-predict(fit,newdata=dati_fit[test,],type="response")
 #set the treeshold
-pred2<-ifelse(pred2>0.22,1,0)
+pred2<-ifelse(pred2>0.13,1,0)
 # create confusion matrix
 table(pred2,dati_fit[test,]$default)
 #evaluate accuracy
