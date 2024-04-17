@@ -5,6 +5,7 @@ library(pROC)
 library(car)
 library(leaps)
 library(corrplot)
+library(glmtoolbox)
 
 load("dati.RData")
 
@@ -33,9 +34,19 @@ dati_fit<-subset(dati, select = c("funded_amnt","int_rate",
 cor<-cor(dati_fit[, sapply(dati_fit, is.numeric)])
 corrplot(cor(dati_fit[, sapply(dati_fit, is.numeric)]), method = "circle", type = "lower", tl.col = "black", tl.srt = 45, diag = FALSE)
 
-#this data are used to create train test and validation with 100k obs
 
 set.seed(1)
+#######TRAIN AND VALIDATION BALANCED FOR DEFAULT
+
+# i want to create a train and validation balance but with balance number of defauult==1 and default==0
+train<-c(sample(which(dati_fit$default==1),50000),sample(which(dati_fit$default==0),50000))
+validation<-c(sample(setdiff(which(dati_fit$default==1),train),50000),sample(setdiff(which(dati_fit$default==0),train),50000))
+test<-setdiff(1:nrow(dati_fit),c(train,validation))
+
+
+
+#######TRAIN AND VALIDATION NOT BALANCED FOR DEFAULT
+
 #i want to select a sub sample of the data of 300k observation
 dati_fit<-dati_fit[sample(1:nrow(dati_fit),300000),]
 # now i want to split data in train, test and validation, each set will have 100k observation.
@@ -107,7 +118,7 @@ adjR2(fit)
 ########method 4: using the best threshold from the f1 score########
 {
 #i want to find the threshold that optimize f1 score
-threshold<-seq(0.01,0.30,0.01)
+threshold<-seq(0.01,0.40,0.01)
 f1<-rep(0,length(threshold))
 sensitivity<-rep(0,length(threshold))
 precision<-rep(0,length(threshold))
@@ -121,9 +132,26 @@ for (i in seq_along(threshold)) {
 max(f1)
 threshold[which(f1==max(f1))]
 }
+{
+#i want to find the threshold that optimize f1 score
+threshold<-seq(0.01,0.40,0.01)
+f1<-rep(0,length(threshold))
+sensitivity<-rep(0,length(threshold))
+precision<-rep(0,length(threshold))
+for (i in seq_along(threshold)) {
+  pred_thre <- predict(fit, newdata = dati_fit[train, ], type = "response")
+  pred2 <- ifelse(pred_thre > threshold[i], 1, 0)
+  sensitivity[i] <- table(pred2, dati_fit[train, ]$default)[2,2] / sum(table(pred2, dati_fit[train, ]$default)[,2])
+  precision[i]<-table(pred2,dati_fit[train,]$default)[2,2]/sum(table(pred2,dati_fit[train,]$default)[2,])
+  f1[i]<-2*(precision[i]*sensitivity[i])/(precision[i]+sensitivity[i])
+}
+max(f1)
+threshold[which(f1==max(f1))]
+}
 
 
 #MODEL VALIDATION ON TEST DATA
+#nb: remember to set the threshoold according to the train, validation, test data used. results change
 
 pred2<-predict(fit,newdata=dati_fit[test,],type="response")
 #set the treeshold
@@ -138,3 +166,5 @@ testRoc<-roc(dati_fit[test,]$default ~ pred2, plot=T, print.auc=T)
 # i want to calculate specificity and sensitivity
 testRoc$specificities
 testRoc$sensitivities
+accuracy
+sensitivity
