@@ -1,5 +1,5 @@
 remove(list = ls())
-####LOGISTIC######
+
 
 library(pROC)
 library(car)
@@ -55,8 +55,12 @@ test<-sample(setdiff(1:nrow(dati_fit),train),(1/3)*nrow(dati_fit))
 validation<-setdiff(setdiff(1:nrow(dati_fit),train),test)
 
 
-# calculat the logistic regression model
-fit<-glm(default~.,data=dati_fit[train,],family="binomial")
+
+######PROBIT########
+fit<-glm(default~.,data=dati_fit[train,],family=binomial(link="probit"))
+
+####LOGISTIC######
+fit<-glm(default~.,data=dati_fit[train,],family=binomial(link="logit"))
 vif(fit)
 summary(fit)
 adjR2(fit)
