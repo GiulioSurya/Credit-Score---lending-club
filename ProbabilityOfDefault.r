@@ -61,6 +61,9 @@ fit<-glm(default~.,data=dati_fit[train,],family=binomial(link="probit"))
 
 ####LOGISTIC######
 fit<-glm(default~.,data=dati_fit[train,],family=binomial(link="logit"))
+
+
+######SUMMARY OF THE MODEL######
 vif(fit)
 summary(fit)
 adjR2(fit)
