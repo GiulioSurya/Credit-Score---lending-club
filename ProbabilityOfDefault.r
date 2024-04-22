@@ -39,20 +39,21 @@ set.seed(1)
 #######TRAIN AND VALIDATION BALANCED FOR DEFAULT
 
 # i want to create a train and validation balance but with balance number of defauult==1 and default==0
-train<-c(sample(which(dati_fit$default==1),50000),sample(which(dati_fit$default==0),50000))
-validation<-c(sample(setdiff(which(dati_fit$default==1),train),50000),sample(setdiff(which(dati_fit$default==0),train),50000))
-test<-setdiff(1:nrow(dati_fit),c(train,validation))
+#train<-c(sample(which(dati_fit$default==1),50000),sample(which(dati_fit$default==0),50000))
+#validation<-c(sample(setdiff(which(dati_fit$default==1),train),50000),sample(setdiff(which(dati_fit$default==0),train),50000))
+#test<-setdiff(1:nrow(dati_fit),c(train,validation))
 
 
 
 #######TRAIN AND VALIDATION NOT BALANCED FOR DEFAULT
-
+{
 #i want to select a sub sample of the data of 300k observation
 dati_fit<-dati_fit[sample(1:nrow(dati_fit),300000),]
 # now i want to split data in train, test and validation, each set will have 100k observation.
 train<-sample(1:nrow(dati_fit),(1/3)*nrow(dati_fit))
 test<-sample(setdiff(1:nrow(dati_fit),train),(1/3)*nrow(dati_fit))
 validation<-setdiff(setdiff(1:nrow(dati_fit),train),test)
+}
 
 
 
@@ -62,6 +63,8 @@ fit<-glm(default~.,data=dati_fit[train,],family=binomial(link="probit"))
 ####LOGISTIC######
 fit<-glm(default~.,data=dati_fit[train,],family=binomial(link="logit"))
 
+#####LINEAR MODEL#########
+fit<-lm(default~.,data=dati_fit[train,])
 
 ######SUMMARY OF THE MODEL######
 vif(fit)
@@ -139,26 +142,11 @@ for (i in seq_along(threshold)) {
 max(f1)
 threshold[which(f1==max(f1))]
 }
-{
-#i want to find the threshold that optimize f1 score
-threshold<-seq(0.01,0.40,0.01)
-f1<-rep(0,length(threshold))
-sensitivity<-rep(0,length(threshold))
-precision<-rep(0,length(threshold))
-for (i in seq_along(threshold)) {
-  pred_thre <- predict(fit, newdata = dati_fit[train, ], type = "response")
-  pred2 <- ifelse(pred_thre > threshold[i], 1, 0)
-  sensitivity[i] <- table(pred2, dati_fit[train, ]$default)[2,2] / sum(table(pred2, dati_fit[train, ]$default)[,2])
-  precision[i]<-table(pred2,dati_fit[train,]$default)[2,2]/sum(table(pred2,dati_fit[train,]$default)[2,])
-  f1[i]<-2*(precision[i]*sensitivity[i])/(precision[i]+sensitivity[i])
-}
-max(f1)
-threshold[which(f1==max(f1))]
-}
+
 
 
 #MODEL VALIDATION ON TEST DATA
-#nb: remember to set the threshoold according to the train, validation, test data used. results change
+#nb: remember to set the threshoold according Tto the model used
 
 pred2<-predict(fit,newdata=dati_fit[test,],type="response")
 #set the treeshold
@@ -175,3 +163,21 @@ testRoc$specificities
 testRoc$sensitivities
 accuracy
 sensitivity
+
+#variable importance plot with shuffling method
+#change the treshold if needed 
+{
+  accuracy <- rep(0, ncol(dati_fit) - 1)
+  for (i in seq_len(ncol(dati_fit) - 1)) {
+    for (j in seq_len(100)) {
+      dati_fit_shuffle <- dati_fit
+      dati_fit_shuffle[, i] <- sample(dati_fit_shuffle[, i])
+      pred2 <- predict(fit, newdata = dati_fit_shuffle[test, ], type = "response")
+      pred2 <- ifelse(pred2 > 0.12, 1, 0)
+      accuracy[i] <- accuracy[i] + sum(diag(table(pred2, dati_fit_shuffle[test, ]$default))) / sum(table(pred2, dati_fit_shuffle[test, ]$default))
+    }
+  }
+  accuracy <- accuracy / 100
+  barplot(accuracy, names.arg = colnames(dati_fit)[-ncol(dati_fit)], las = 2)
+}
+
