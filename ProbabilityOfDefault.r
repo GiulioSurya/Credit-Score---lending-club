@@ -181,6 +181,14 @@ sensitivity
   barplot(accuracy, names.arg = colnames(dati_fit)[-ncol(dati_fit)], las = 2)
 }
 
+#I want to compute Brier Score or Squared Error for my three models: logit, probit and linear
+#The function takes as input the predicted probabilities and the observed binary outcomes.
+#The Brier Score is a measure of the accuracy of a probabilistic prediction.
+#It is calculated as the mean squared difference between the predicted probabilities and the observed binary outcomes.
+#The Brier Score ranges from 0 to 1, with lower values indicating better predictions.
+#The Squared Error is the square of the Brier Score.
+brier_score(dati_fit[test,]$default, pred2)
+
 
 #I want to do a Hosmer-Lemeshow test on my logit model
 #Computed with hoslem.test() function in "ResourceSelection" package.
