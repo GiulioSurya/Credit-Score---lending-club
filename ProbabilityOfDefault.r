@@ -187,13 +187,39 @@ sensitivity
 #It is calculated as the mean squared difference between the predicted probabilities and the observed binary outcomes.
 #The Brier Score ranges from 0 to 1, with lower values indicating better predictions.
 #The Squared Error is the square of the Brier Score.
-brier_score(dati_fit[test,]$default, pred2)
+#The Squared Error ranges from 0 to 1, with lower values indicating better predictions.
+#The function returns the Brier Score and the Squared Error.
 
-
-#I want to do a Hosmer-Lemeshow test on my logit model
-#Computed with hoslem.test() function in "ResourceSelection" package.
-#The function takes as input the predicted probabilities and the observed binary outcomes.
-install.packages("ResourceSelection")
-library(ResourceSelection)
-hl <- hoslem.test(dati_fit[test,]$default, pred2, g=15)
-hl
+#Brier Score
+{
+  brier_score <- function(pred, obs) {
+    brier_score <- mean((pred - obs)^2)
+    return(brier_score)
+  }
+  #Squared Error
+  squared_error <- function(pred, obs) {
+    squared_error <- brier_score(pred, obs)^2
+    return(squared_error)
+  }
+  #Logit
+  pred_logit <- predict(fit, newdata = dati_fit[test, ], type = "response")
+  brier_score_logit <- brier_score(pred_logit, dati_fit[test, ]$default)
+  squared_error_logit <- squared_error(pred_logit, dati_fit[test, ]$default)
+  #Probit
+  fit_probit <- glm(default ~ ., data = dati_fit[train, ], family = binomial(link = "probit"))
+  pred_probit <- predict(fit_probit, newdata = dati_fit[test, ], type = "response")
+  brier_score_probit <- brier_score(pred_probit, dati_fit[test, ]$default)
+  squared_error_probit <- squared_error(pred_probit, dati_fit[test, ]$default)
+  #Linear
+  fit_linear <- lm(default ~ ., data = dati_fit[train, ])
+  pred_linear <- predict(fit_linear, newdata = dati_fit[test, ])
+  brier_score_linear <- brier_score(pred_linear, dati_fit[test, ]$default)
+  squared_error_linear <- squared_error(pred_linear, dati_fit[test, ]$default)
+  #Results
+  brier_score_logit
+  squared_error_logit
+  brier_score_probit
+  squared_error_probit
+  brier_score_linear
+  squared_error_linear
+}
