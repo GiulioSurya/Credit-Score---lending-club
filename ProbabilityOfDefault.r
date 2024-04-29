@@ -146,7 +146,7 @@ threshold[which(f1==max(f1))]
 
 
 #MODEL VALIDATION ON TEST DATA
-#nb: remember to set the threshoold according Tto the model used
+#nb: remember to set the threshoold according to the model used
 
 pred2<-predict(fit,newdata=dati_fit[test,],type="response")
 #set the treeshold
@@ -181,3 +181,11 @@ sensitivity
   barplot(accuracy, names.arg = colnames(dati_fit)[-ncol(dati_fit)], las = 2)
 }
 
+
+#I want to do a Hosmer-Lemeshow test on my logit model
+#Computed with hoslem.test() function in "ResourceSelection" package.
+#The function takes as input the predicted probabilities and the observed binary outcomes.
+install.packages("ResourceSelection")
+library(ResourceSelection)
+hl <- hoslem.test(dati_fit[test,]$default, pred2, g=15)
+hl
