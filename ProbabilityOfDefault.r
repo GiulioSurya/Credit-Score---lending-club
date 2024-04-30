@@ -1,11 +1,12 @@
 remove(list = ls())
 
-
+{
 library(pROC)
 library(car)
 library(leaps)
 library(corrplot)
 library(glmtoolbox)
+}
 
 load("dati.RData")
 
@@ -150,7 +151,7 @@ threshold[which(f1==max(f1))]
 
 pred2<-predict(fit,newdata=dati_fit[test,],type="response")
 #set the treeshold
-pred2<-ifelse(pred2>0.12,1,0)
+pred2<-ifelse(pred2>0.14,1,0)
 # create confusion matrix
 table(pred2,dati_fit[test,]$default)
 #evaluate accuracy
@@ -197,3 +198,7 @@ install.packages("ResourceSelection")
 library(ResourceSelection)
 hl <- hoslem.test(dati_fit[test,]$default, pred2, g=15)
 hl
+
+#i want to compute MSE
+MSE<-mean((dati_fit[test,]$default-pred2)^2)
+MSE
