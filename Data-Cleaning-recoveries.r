@@ -142,10 +142,4 @@ vif(lm_fit)
 plot(density(dati[train, "recoveries"]), main = "Density of recoveries", xlab = "Recoveries")
 
 
-png("pairs.png")
-pairs(test1)
-#i wanto to download the plot
-dev.off()
-
-
 
