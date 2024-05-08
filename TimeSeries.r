@@ -62,6 +62,15 @@ ggPacf(ts_diff)
 # We want to understand which parameters p and q of the ARIMA model are the best
 auto.arima(ts_diff)
 # The function suggests that the best model is an ARIMA(1,1,0) model because it has the lowest AIC
+# We look also at the sample autocorrelation to select values of p and q
+acf(ts_diff)
+# The ACF has a significant peak at lag 1, so we can try an ARIMA(1,1,0) model
+# We look also at the sample partial autocorrelation to select values of p and q
+pacf(ts_diff)
+# The PACF has a significant peak at lag 1, so we can try an ARIMA(1,1,0) model
+
+
+
 
 # Divide the time series in training and test set (80% training, 20% test)
 train <- window(ts_diff, end = c(2019, 12))
@@ -69,6 +78,20 @@ test <- window(ts_diff, start = c(2020, 1))
 # Fit an ARIMA(1,1,0) model
 fit <- Arima(train, order = c(1,1,0))
 summary(fit)
+
+# I want to verify if the residuals are white noise
+checkresiduals(fit)
+# The residuals are white noise, so the model is good I DONT KNOW CHECK!!!
+# First we do a Durbin-Watson test to see if there is autocorrelation in the residuals
+
+# We do a Breusch-Godfrey test to see if the residuals are white noise
+
+# We do a Ljung-Box test to see if the residuals are white noise
+
+# Test if there are structural breaks: Chow test
+chow.test(ts_diff, index = 200)
+# The test shows that there is a structural break in the time series???
+# We have to divide the time series in two parts and fit an ARIMA model to each part???
 
 # Forecast the test set for all the months in 2024, so until December 2024
 forecast <- forecast(fit, h = 24)
@@ -90,16 +113,7 @@ autoplot(forecast_intervals)
 autoplot(forecast_intervals) + xlim(c(2017, 2024))
 
 
-# First we do a Durbin-Watson test to see if there is autocorrelation in the residuals
 
-# We do a Breusch-Godfrey test to see if the residuals are white noise
-
-# We do a Ljung-Box test to see if the residuals are white noise
-
-# Test if there are structural breaks: Chow test
-chow.test(ts_diff, index = 200)
-# The test shows that there is a structural break in the time series???
-# We have to divide the time series in two parts and fit an ARIMA model to each part???
 
 # Verify the accuracy of the forecast
 accuracy(forecast, test)
