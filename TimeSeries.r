@@ -93,6 +93,8 @@ chow.test(ts_diff, index = 200)
 # The test shows that there is a structural break in the time series???
 # We have to divide the time series in two parts and fit an ARIMA model to each part???
 
+# NON HO CAPITO FINO A QUANTO CAZZO HA PREDETTO CON STA FORECAST PERCHè PARREBBE CHE HA PREDETTO TIPO VALORI CHE GIA ABBIAMO???
+# CIOE HA TIPO PREDETTO I VALORI TEST MA NOI DOBBIAMO PREDIRRE IL FUTURO SCONOSCIUTO, DA VERIFICARE
 # Forecast the test set for all the months in 2024, so until December 2024
 forecast <- forecast(fit, h = 24)
 # Plot the forecast
@@ -118,3 +120,4 @@ autoplot(forecast_intervals) + xlim(c(2017, 2024))
 # Verify the accuracy of the forecast
 accuracy(forecast, test)
 # On test set MAE is 0.1, RMSE is 0.22: the forecast is ... good?
+# Verify also in other way: MASE, MAPE, etc.
