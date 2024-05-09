@@ -147,7 +147,7 @@ threshold[which(f1==max(f1))]
 
 pred2<-predict(fit,newdata=dati_fit[test,],type="response")
 #set the threshold
-pred2<-ifelse(pred2>0.22,1,0) #for logit, according to f1 score, threshold is 0.22
+pred2<-ifelse(pred2>0.14,1,0) #for logit, according to f1 score, threshold is 0.14
 # create confusion matrix
 table(pred2,dati_fit[test,]$default)
 #evaluate accuracy
@@ -210,3 +210,8 @@ sensitivity
 }
 which.min (c(brier_score_logit, brier_score_probit, brier_score_linear))
 # We can see that the best model is the Logit one, because it has the lowest Brier Score.
+
+# I want to do Hosmer-Lemeshow test to check the goodness of fit of the model
+library(ResourceSelection)
+hl <- hoslem.test(dati_fit[test, ]$default, fitted(fit))
+hl
