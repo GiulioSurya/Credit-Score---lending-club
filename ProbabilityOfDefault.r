@@ -1,20 +1,14 @@
 remove(list = ls())
 
-<<<<<<< HEAD
 {
-=======
->>>>>>> aa44541c28935cd24f9d7ee91bceae48b20c5518
 library(pROC)
 library(car)
 library(leaps)
 library(corrplot)
 library(glmtoolbox)
-<<<<<<< HEAD
-}
-=======
 library(DescTools)
 library(ResourceSelection)
->>>>>>> aa44541c28935cd24f9d7ee91bceae48b20c5518
+}
 
 load("dati.RData")
 
@@ -34,7 +28,7 @@ load("dati.RData")
 #deleted for elena and jack --> "dti" ,"application_type","tot_coll_amt","pct_tl_nvr_dlq","pub_rec_bankruptcies","tax_liens",,"total_bc_limit"
 #"home_ownership","tot_hi_cred_lim","num_tl_90g_dpd_24m"
 
-#We try to eliminate non-significant variables in the logit model with 17 variables
+#We delete non-significant variables in the logit model with 17 variables
 #We also deleted from giulio's model: annual inc, open_il_24m, bc_util, chargeoff_within_12_mths, mort_acc,"avg_cur_bal", "tot_cur_bal","open_acc"
 #Here we obtain 7 variables
 dati_fit<-subset(dati, select = c("funded_amnt","int_rate",
@@ -77,14 +71,13 @@ fit<-lm(default~.,data=dati_fit[train,])
 
 ######SUMMARY OF THE MODEL######
 vif(fit)
+# We notice some high VIF values, but we can ignore them because we are interested in a prediction, we are not doing inference.
 summary(fit)
-adjR2(fit)
 PseudoR2(fit, which = "McFadden")
 
 #####THRESHOLD SELECTION######
 
 #######Method 1: using the best threshold from the ROC curve########
-
 # calculate the probability of the loan to be in default on train data
 #pred<-predict(fit,newdata=dati_fit[train,],type="response")
 # calculate the ROC curve
@@ -101,8 +94,6 @@ PseudoR2(fit, which = "McFadden")
 #sum(diag(table(pred2,dati_fit[test,]$default)))/sum(table(pred2,dati_fit[test,]$default))
 #table(pred2, dati_fit[test, ]$default)[2,2] / sum(table(pred2, dati_fit[test, ]$default)[,2])
 
-
-
 #######method 2: using the best threshold from the accuracy########
 #i want to try to find the best threshold using accuracy
 #threshold<-seq(0.01,0.99,0.01)
@@ -115,8 +106,6 @@ PseudoR2(fit, which = "McFadden")
 #plot(threshold,accuracy,type="l")
 #max(accuracy)
 #threshold[which(accuracy==max(accuracy))]
-
-
 
 ########method 3: using the best threshold from the sensitivity########
 #i want to find a threshold but using sensitivity
@@ -157,13 +146,8 @@ threshold[which(f1==max(f1))]
 #nb: remember to set the threshold according to the model used
 
 pred2<-predict(fit,newdata=dati_fit[test,],type="response")
-<<<<<<< HEAD
-#set the treeshold
-pred2<-ifelse(pred2>0.14,1,0)
-=======
 #set the threshold
-pred2<-ifelse(pred2>0.12,1,0)
->>>>>>> aa44541c28935cd24f9d7ee91bceae48b20c5518
+pred2<-ifelse(pred2>0.22,1,0) #for logit, according to f1 score, threshold is 0.22
 # create confusion matrix
 table(pred2,dati_fit[test,]$default)
 #evaluate accuracy
@@ -176,6 +160,7 @@ testRoc$specificities
 testRoc$sensitivities
 accuracy
 sensitivity
+# We obtained good values for accuracy and sensitivity. The ROC curve is also good.
 
 #variable importance plot with shuffling method
 #change the threshold if needed 
@@ -186,76 +171,42 @@ sensitivity
       dati_fit_shuffle <- dati_fit
       dati_fit_shuffle[, i] <- sample(dati_fit_shuffle[, i])
       pred2 <- predict(fit, newdata = dati_fit_shuffle[test, ], type = "response")
-      pred2 <- ifelse(pred2 > 0.12, 1, 0)
+      pred2 <- ifelse(pred2 > 0.22, 1, 0)
       accuracy[i] <- accuracy[i] + sum(diag(table(pred2, dati_fit_shuffle[test, ]$default))) / sum(table(pred2, dati_fit_shuffle[test, ]$default))
     }
   }
   accuracy <- accuracy / 100
   barplot(accuracy, names.arg = colnames(dati_fit)[-ncol(dati_fit)], las = 2)
 }
+# We can see from the variable importance plot that the most important variables in discriminating between default and non-default loans are
+# int_rate, fico_range_low and revol_util.
 
-#I want to compute Brier Score or Squared Error for my three models: logit, probit and linear
-#The function takes as input the predicted probabilities and the observed binary outcomes.
+
+#I want to compute Brier Score for my three models in order to compare them.
 #The Brier Score is a measure of the accuracy of a probabilistic prediction.
 #It is calculated as the mean squared difference between the predicted probabilities and the observed binary outcomes.
 #The Brier Score ranges from 0 to 1, with lower values indicating better predictions.
-#The Squared Error is the square of the Brier Score.
-#The Squared Error ranges from 0 to 1, with lower values indicating better predictions.
-#The function returns the Brier Score and the Squared Error.
-
 #Brier Score
 {
   brier_score <- function(pred, obs) {
     brier_score <- mean((pred - obs)^2)
     return(brier_score)
   }
-  #Squared Error
-  squared_error <- function(pred, obs) {
-    squared_error <- brier_score(pred, obs)^2
-    return(squared_error)
-  }
   #Logit
   pred_logit <- predict(fit, newdata = dati_fit[test, ], type = "response")
   brier_score_logit <- brier_score(pred_logit, dati_fit[test, ]$default)
-  squared_error_logit <- squared_error(pred_logit, dati_fit[test, ]$default)
   #Probit
   fit_probit <- glm(default ~ ., data = dati_fit[train, ], family = binomial(link = "probit"))
   pred_probit <- predict(fit_probit, newdata = dati_fit[test, ], type = "response")
   brier_score_probit <- brier_score(pred_probit, dati_fit[test, ]$default)
-  squared_error_probit <- squared_error(pred_probit, dati_fit[test, ]$default)
   #Linear
   fit_linear <- lm(default ~ ., data = dati_fit[train, ])
   pred_linear <- predict(fit_linear, newdata = dati_fit[test, ])
   brier_score_linear <- brier_score(pred_linear, dati_fit[test, ]$default)
-  squared_error_linear <- squared_error(pred_linear, dati_fit[test, ]$default)
   #Results
   brier_score_logit
-  squared_error_logit
   brier_score_probit
-  squared_error_probit
   brier_score_linear
-  squared_error_linear
 }
-
-<<<<<<< HEAD
-#I want to do a Hosmer-Lemeshow test on my logit model
-#Computed with hoslem.test() function in "ResourceSelection" package.
-#The function takes as input the predicted probabilities and the observed binary outcomes.
-install.packages("ResourceSelection")
-library(ResourceSelection)
-hl <- hoslem.test(dati_fit[test,]$default, pred2, g=15)
-hl
-
-#i want to compute MSE
-MSE<-mean((dati_fit[test,]$default-pred2)^2)
-MSE
-=======
-#Compute the expected values (probabilities) for my logit model
-#fit.hat <- predict(fit, newdata = dati_fit[test, ], type = "response")
-# Compute the Hosmer-Lemeshow goodness-of-fit test
-#hoslem.test(dati_fit[test, ]$default, fit.hat, g = 10)
-
-#install.packages("gofcat")
-#library(gofcat)
-#hosmerlem(fit, group = 10)
->>>>>>> aa44541c28935cd24f9d7ee91bceae48b20c5518
+which.min (c(brier_score_logit, brier_score_probit, brier_score_linear))
+# We can see that the best model is the Logit one, because it has the lowest Brier Score.
