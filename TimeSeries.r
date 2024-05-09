@@ -54,22 +54,12 @@ autoplot(ts_diff)
 adf.test(ts_diff)
 # We see from the test that now the time series is stationary
 
-# Look at the ACF and PACF of the first difference
-ggAcf(ts_diff)
-ggPacf(ts_diff)
+
 # We see that the ACF has a significant peak at lag 1 and the PACF has a significant peak at lag 1
 # This suggests that the time series can be modeled with an ARIMA(1,1,0) model
 # We want to understand which parameters p and q of the ARIMA model are the best
 auto.arima(ts_diff)
 # The function suggests that the best model is an ARIMA(1,1,0) model because it has the lowest AIC
-# We look also at the sample autocorrelation to select values of p and q
-acf(ts_diff)
-# The ACF has a significant peak at lag 1, so we can try an ARIMA(1,1,0) model
-# We look also at the sample partial autocorrelation to select values of p and q
-pacf(ts_diff)
-# The PACF has a significant peak at lag 1, so we can try an ARIMA(1,1,0) model
-
-
 
 
 # Divide the time series in training and test set (80% training, 20% test)
@@ -78,6 +68,7 @@ test <- window(ts_diff, start = c(2020, 1))
 # Fit an ARIMA(1,1,0) model
 fit <- Arima(train, order = c(1,1,0))
 summary(fit)
+
 
 # I want to verify if the residuals are white noise
 checkresiduals(fit)
@@ -88,31 +79,38 @@ checkresiduals(fit)
 
 # We do a Ljung-Box test to see if the residuals are white noise
 
-# Test if there are structural breaks: Chow test
-chow.test(ts_diff, index = 200)
-# The test shows that there is a structural break in the time series???
-# We have to divide the time series in two parts and fit an ARIMA model to each part???
-
-# NON HO CAPITO FINO A QUANTO CAZZO HA PREDETTO CON STA FORECAST PERCHè PARREBBE CHE HA PREDETTO TIPO VALORI CHE GIA ABBIAMO???
-# CIOE HA TIPO PREDETTO I VALORI TEST MA NOI DOBBIAMO PREDIRRE IL FUTURO SCONOSCIUTO, DA VERIFICARE
-# Forecast the test set for all the months in 2024, so until December 2024
-forecast <- forecast(fit, h = 24)
-# Plot the forecast
-autoplot(forecast)
-# Plot the forecast with the test set
-autoplot(forecast) + autolayer(test, series = "Test set")
-
 # Show me the acf and pacf of the residuals with ARIMA(1,1,0)
 ggAcf(residuals(fit))
 ggPacf(residuals(fit))
 # The ACF and PACF of the residuals show that there is no persistence in the residuals, so the model is good
 
-# Predict the intervals of the forecast
-forecast_intervals <- forecast(fit, h = 24, level = c(80, 95))
-# Plot the forecast with the intervals
-autoplot(forecast_intervals)
-# Do a plot just from 2017 to see better the prediction
-autoplot(forecast_intervals) + xlim(c(2017, 2024))
+
+
+
+# Test if there are structural breaks: Chow test
+chow.test(ts_diff, index = 200)
+# The test shows that there is a structural break in the time series???
+# We have to divide the time series in two parts and fit an ARIMA model to each part???
+
+
+
+
+
+# CIOE HA TIPO PREDETTO I VALORI TEST MA NOI DOBBIAMO PREDIRRE IL FUTURO SCONOSCIUTO, DA VERIFICARE
+# Forecast the test set for all the months in 2024, so until December 2024
+forecast <- forecast(fit, h = 48)
+# Plot the forecast
+autoplot(forecast)
+# Plot the forecast with the test set
+autoplot(forecast) + autolayer(test, series = "Test set")
+
+# ORA MANCA LA PARTE IN CUI FACCIAMO L'EFFETTIVA FORECAST SUL FUTURO
+# E ANCHE I POINT FORECAST MANCANO?
+
+
+
+# Predict the point forecast
+
 
 
 
