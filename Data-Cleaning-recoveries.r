@@ -26,7 +26,7 @@ dati<-subset(dati, select=-c(recoveries_bin,loan_status))
 #remove NA
 dati <- dati[complete.cases(dati),]
 }
-
+save(dati, file = "dati_clean.RData")
 
 
 ###DATA TRANSFORMATION
@@ -39,8 +39,16 @@ dati$int_rate<-as.numeric(gsub("%","",dati$int_rate))
 dati<-dati %>% mutate_if(is.character, as.factor)
 #MUTATE policy_code in factor
 dati$policy_code<-as.factor(dati$policy_code)
+#winzorize the variable recoveries to 95 percentile
+recoveries_95<-quantile(dati$recoveries,0.95)
+dati$recoveries[dati$recoveries>recoveries_95]<-recoveries_95
+#winzorize revol_bal to 95 percentile
+revol_bal_95<-quantile(dati$revol_bal,0.99)
+dati$revol_bal[dati$revol_bal>revol_bal_95]<-revol_bal_95
+#winzorize total_cur_bal to 99 percentile
+total_cur_bal_99<-quantile(dati$tot_cur_bal,0.99)
+dati$tot_cur_bal[dati$tot_cur_bal>total_cur_bal_99]<-total_cur_bal_99
 }
-
 
 
 
@@ -102,9 +110,6 @@ dati<-subset(dati, select = -c(policy_code, application_type,pymnt_plan, earlies
 }
 
 
-
-
-
 #step wise forward selection
 #split the data in train and test
 set.seed(12)
@@ -112,27 +117,70 @@ train<-sample(1:nrow(dati),0.7*nrow(dati))
 test<-setdiff(1:nrow(dati),train)
 
 stepwise_fit <- regsubsets(recoveries ~ ., data = dati[train,], nvmax = 200, really.big = TRUE, method="forward")
-summary(stepwise_fit)
+stepwise_fit<-regsubsets(recoveries ~ ., data = dati[train,], nvmax = 200, really.big = TRUE,method="backward")
 summary(stepwise_fit)$bic
 #best model bic
 best_model <- which.min(summary(stepwise_fit)$bic)
 best_model
 best_model_predictors <- names(coef(stepwise_fit, best_model))
+View(best_model_predictors)
 #remove intercept
 best_model_predictors <- best_model_predictors[!best_model_predictors %in% "(Intercept)"]
 # add recoveries to the best model predictors
-#fit the lm with the best model variables
+#fit the lm with the best model variables-forward
 lm_fit <- lm(recoveries ~ loan_amnt+term+int_rate+verification_status+dti+fico_range_low+pub_rec+total_pymnt+
 last_pymnt_amnt+tot_cur_bal+open_il_24m+mo_sin_old_rev_tl_op+mo_sin_rcnt_rev_tl_op+
-mort_acc+num_actv_rev_tl+num_bc_sats+num_bc_tl+hardship_flag+debt_settlement_flag,data = dati[train,])
+mort_acc+num_actv_rev_tl+num_bc_sats+num_bc_tl+debt_settlement_flag,data = dati[train,])
+#fit with backward covariates
+lm_fit <- lm(recoveries ~ loan_amnt+installment+home_ownership+verification_status+dti+delinq_2yrs+fico_range_low+revol_bal+total_pymnt+last_pymnt_amnt+
+total_rev_hi_lim+acc_open_past_24mths+mo_sin_old_rev_tl_op+mort_acc+num_actv_rev_tl+num_bc_sats+num_bc_tl+debt_settlement_flag+hardship_flag,data = dati[train,])
+#my fit with logical variable
+lm_fit<-lm(recoveries ~ loan_amnt+fico_range_low+log(revol_bal+1)+log(total_pymnt+1)+tot_cur_bal, data = dati[train,])
 summary(lm_fit)
-
+vif(lm_fit)
 predict_recoveries <- predict(lm_fit, newdata = dati[test,])
-#rmse
 rmse <- sqrt(mean((predict_recoveries - dati[test, "recoveries"])^2))
 rmse
-summary(dati$recoveries)
+predict_recoveries <- predict(lm_fit, newdata = dati[test,])
+#plot scatter  of recoveries and revol_bal+1 with the regression line
+plot(log(dati$tot_cur_bal),dati$recoveries, xlim = c(0, 20), ylim = c(0, 20000), xlab = "log(tot_cur_bal)", ylab = "recoveries")
+summary(dati$total_pymnt)
+View(head(dati))
+qqPlot(lm_fit, main = "QQ plot")
+
+#plot density of recoveries
+plot(density(log(dati$recoveries+1)), main = "Density of recoveries", xlab = "Recoveries")
+
+#annotazioni: allora il problema ora è loan_amnt+ tipo log(revol_bal+1) diventa significativo e il coefficiente ha senso quando lo tolgo, ora vedo
+# cosa succede con altre variabili
+log(revol_bal+1)
+
+summary(dati$loan_amnt)
+#plot recovieries
+
+#rmse
+
+
+#correlation between dti
+
+#annotazione, inserendo il log di loan amount MSE è aumentato,
+
 vif(lm_fit)
+#diagnotic plot
+#qq plot
+qqPlot(lm_fit, main = "QQ plot")
+plot(lm_fit, which=1)
+
+#try with lasso
+library(glmnet)
+x <- model.matrix(recoveries ~ ., data = dati[train,])[,-1]
+y <- dati[train, "recoveries"]
+cv_fit <- cv.glmnet(x, y, alpha = 1)
+best_lambda <- cv_fit$lambda.min
+lasso_fit <- glmnet(x, y, alpha = 1, lambda = best_lambda)
+predict_recoveries_lasso <- predict(lasso_fit, newx = model.matrix(recoveries ~ ., data = dati[test,][,-1]))
+rmse_lasso <- sqrt(mean((predict_recoveries_lasso - dati[test, "recoveries"])^2))
+rmse_lasso
 
 #specificare distribuzione su glm e vedere con aic o bic
 #provare lasso
