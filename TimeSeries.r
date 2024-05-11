@@ -71,8 +71,10 @@ summary(fit)
 
 
 # I want to verify if the residuals are white noise
-checkresiduals(fit)
-# The residuals are white noise, so the model is good I DONT KNOW CHECK!!!
+checkresiduals(fit)   #This is a Ljung_box test
+# The residuals are NOT white noise, so the model is NOT good I DONT KNOW CHECK!!! se rifiuta il test non va bene
+# So if the model is good, ARIMA residuals should be white noise because the model has captured all the information left in the TS 
+
 # First we do a Durbin-Watson test to see if there is autocorrelation in the residuals
 
 # We do a Breusch-Godfrey test to see if the residuals are white noise
@@ -96,20 +98,27 @@ chow.test(ts_diff, index = 200)
 
 
 
-# CIOE HA TIPO PREDETTO I VALORI TEST MA NOI DOBBIAMO PREDIRRE IL FUTURO SCONOSCIUTO, DA VERIFICARE
-# Forecast the test set for all the months in 2024, so until December 2024
+# CIOE HA TIPO PREDETTO I VALORI TEST MA NOI POI DOBBIAMO PREDIRRE IL FUTURO SCONOSCIUTO, DA VERIFICARE
+# Forecast the part of test set for all the months in 2024, so until December 2024
 forecast <- forecast(fit, h = 48)
 # Plot the forecast
 autoplot(forecast)
 # Plot the forecast with the test set
 autoplot(forecast) + autolayer(test, series = "Test set")
 
-# ORA MANCA LA PARTE IN CUI FACCIAMO L'EFFETTIVA FORECAST SUL FUTURO
+# Now we want to forecast in the future, so we have to fit the ARIMA model to the entire time series
+fit.future <- Arima(ts_diff, order = c(1,1,0))
+forecast <- forecast(fit.future, h = 10)
+autoplot(forecast)
+# We see that the forecast is a straight line, which is not good. Why?
+# We have to add the trend to the forecast?????????????????
+#forecast_with_trend <- forecast(fit.future, h = 10, xreg = time(ts_diff))
+#autoplot(forecast_with_trend)
+# Now the forecast is better because we added the trend to the forecast
+
+
 # E ANCHE I POINT FORECAST MANCANO?
 
-
-
-# Predict the point forecast
 
 
 
