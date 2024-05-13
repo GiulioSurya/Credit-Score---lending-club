@@ -94,12 +94,14 @@ lm_fit<-lm(recoveries ~ loan_amnt+term+installment+verification_status+delinq_2y
 total_rec_prncp+total_rec_int+total_rec_late_fee+open_rv_24m+total_rev_hi_lim+debt_settlement_flag,data = dati[train,])
 summary(lm_fit)
 vif(lm_fit)
+#plot density of residuals
+plot(density(lm_fit$residuals))
 
 
 #LINEAR MODEL
 lm_fit <- lm(recoveries ~ loan_amnt+term+int_rate+fico_range_low+log(total_pymnt+1)+tot_cur_bal+mort_acc+num_bc_sats+num_bc_tl+
 debt_settlement_flag+total_rec_prncp+total_rec_int,data = dati[train,])
-summary(lm_fit)
+ summary(lm_fit)
 vif(lm_fit)
 
 
@@ -112,26 +114,34 @@ predict_recoveries <- predict(lm_fit, newdata = dati[test,])
 qqPlot(lm_fit, main = "QQ plot")
 plot(lm_fit, which=1)
 varImp(lm_fit)
+checkresiduals(lm_fit)
 
 
-#LASSO
-x <- model.matrix(recoveries ~ ., data = dati[train,])[,-1]
+#LASSO REGRESSION
+x <- model.matrix(recoveries ~ ., data = dati[train,])
 y <- dati[train, "recoveries"]
-cv_fit <- cv.glmnet(x, y, alpha = 1)
-best_lambda <- cv_fit$lambda.min
+lasso_fit <- cv.glmnet(x, y, alpha = 1, nfolds = 10)
+plot(lasso_fit)
+best_lambda <- lasso_fit$lambda.min
+best_lambda
 lasso_fit <- glmnet(x, y, alpha = 1, lambda = best_lambda)
-predict_recoveries_lasso <- predict(lasso_fit, newx = model.matrix(recoveries ~ ., data = dati[test,][,-1]))
-rmse_lasso <- sqrt(mean((predict_recoveries_lasso - dati[test, "recoveries"])^2))
-rmse_lasso
-lasso_fit$beta
+predict_recoveries <- predict(lasso_fit, newx = model.matrix(recoveries ~ ., data = dati[test,]))
+rmse <- sqrt(mean((predict_recoveries - dati[test, "recoveries"])^2))
+rmse
 
 
 
-#try with ridge
-best_lambda <- cv_fit$lambda.min
+#RIDGE REGRESSION
+x <- model.matrix(recoveries ~ ., data = dati[train,])
+y <- dati[train, "recoveries"]
+ridge_fit <- cv.glmnet(x, y, alpha = 0, nfolds = 10)
+plot(ridge_fit)
+cv.err <- cv.glmnet(x, y, alpha = 0)
+best_lambda <- cv.err$lambda.1se
+best_lambda
 ridge_fit <- glmnet(x, y, alpha = 0, lambda = best_lambda)
-predict_recoveries_ridge <- predict(ridge_fit, newx = model.matrix(recoveries ~ ., data = dati[test,][,-1]))
-rmse_ridge <- sqrt(mean((predict_recoveries_ridge - dati[test, "recoveries"])^2))
-rmse_ridge
-
+predict_recoveries <- predict(ridge_fit, newx = model.matrix(recoveries ~ ., data = dati[test,]))
+rmse <- sqrt(mean((predict_recoveries - dati[test, "recoveries"])^2))
+rmse
+coef(ridge_fit)
 
