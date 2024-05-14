@@ -21,6 +21,10 @@ ts <- ts(ts$FEDFUNDS, start = c(as.yearmon("1954-07")), end = c(as.yearmon("2024
 autoplot(ts)
 # We notice that probably the time series is not stationary and seem to have a stochastic trend
 
+# Verify the heteroskedasticity of the time series
+ggtsdisplay(ts)
+# The time series seems to have a stochastic trend and heteroskedasticity
+
 # Apply the log to the time series: SERVE???
 # ts_log <- log(ts)
 # autoplot(ts_log)
@@ -28,7 +32,7 @@ autoplot(ts)
 
 # Analysis of the stationarity: Augmented DF test
 adf.test(ts)
-# the test shows that the time series is NOT stationary and that there is a stochastic trend
+# the test do not reject the hypothesis of NON stationarity and stochastic trend
 
 # Decompose the time series in trend, seasonality and residuals
 decomposed_ts <- decompose(ts)
@@ -37,6 +41,7 @@ autoplot(decomposed_ts)
 # We can see that the trend is first increasing and then decreasing, the seasonality is not present
 # Plot a seasonal plot
 ggseasonplot(ts)
+# We can see that there is no seasonality in the time series
 # Decompose the time series with the multiplicative decomposition
 decomposed_ts_mult <- decompose(ts, type = "multiplicative")
 autoplot(decomposed_ts_mult)
@@ -52,7 +57,7 @@ ggPacf(ts)
 ts_diff <- diff(ts)
 autoplot(ts_diff)
 adf.test(ts_diff)
-# We see from the test that now the time series is stationary
+# We see from the test that now the time series is stationary, we reject the null hypothesis of NON-stationarity
 
 
 # We see that the ACF has a significant peak at lag 1 and the PACF has a significant peak at lag 1
@@ -69,9 +74,11 @@ test <- window(ts_diff, start = c(2020, 1))
 fit <- Arima(train, order = c(1,1,0))
 summary(fit)
 
+fit2 <- Arima(train, order = c(1,1,1))
+summary(fit2)
 
 # I want to verify if the residuals are white noise
-checkresiduals(fit)   #This is a Ljung_box test
+checkresiduals(fit2)   #This is a Ljung_box test
 # The residuals are NOT white noise, so the model is NOT good I DONT KNOW CHECK!!! se rifiuta il test non va bene
 # So if the model is good, ARIMA residuals should be white noise because the model has captured all the information left in the TS 
 
