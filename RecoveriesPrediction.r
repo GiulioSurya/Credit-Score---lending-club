@@ -108,13 +108,21 @@ vif(lm_fit)
 predict_recoveries <- predict(lm_fit, newdata = dati[test,])
 rmse <- sqrt(mean((predict_recoveries - dati[test, "recoveries"])^2))
 rmse
-predict_recoveries <- predict(lm_fit, newdata = dati[test,])
 
 #DIAGNOSTIC
 qqPlot(lm_fit, main = "QQ plot")
 plot(lm_fit, which=1)
 varImp(lm_fit)
-checkresiduals(lm_fit)
+
+# K-FOLD CROSS-VALIDATION
+set.seed(12)
+cv_model <- train(recoveries ~ loan_amnt+term+int_rate+fico_range_low+log(total_pymnt+1)+tot_cur_bal+mort_acc+num_bc_sats+num_bc_tl+
+debt_settlement_flag+total_rec_prncp+total_rec_int, data = dati[train,], method = "lm", trControl = trainControl(method = "cv", number = 10))
+cv_model$results
+cv_model$finalModel
+predict_recoveries <- predict(cv_model, newdata = dati[test,])
+rmse <- sqrt(mean((predict_recoveries - dati[test, "recoveries"])^2))
+rmse
 
 
 #LASSO REGRESSION
@@ -128,8 +136,7 @@ lasso_fit <- glmnet(x, y, alpha = 1, lambda = best_lambda)
 predict_recoveries <- predict(lasso_fit, newx = model.matrix(recoveries ~ ., data = dati[test,]))
 rmse <- sqrt(mean((predict_recoveries - dati[test, "recoveries"])^2))
 rmse
-
-
+coef(lasso_fit)
 
 #RIDGE REGRESSION
 x <- model.matrix(recoveries ~ ., data = dati[train,])
