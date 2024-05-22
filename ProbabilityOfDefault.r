@@ -212,6 +212,6 @@ which.min (c(brier_score_logit, brier_score_probit, brier_score_linear))
 # We can see that the best model is the Logit one, because it has the lowest Brier Score.
 
 # I want to do Hosmer-Lemeshow test to check the goodness of fit of the model
-library(ResourceSelection)
-hl <- hoslem.test(dati_fit[test, ]$default, fitted(fit))
-hl
+# library(ResourceSelection)
+# hl <- hoslem.test(dati_fit[test, ]$default, fitted(fit))
+# hl
