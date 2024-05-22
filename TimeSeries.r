@@ -137,6 +137,7 @@ ut<-fit_final@fit$residuals/fit_final@fit$sigma
 # Usare fitdl'istr per stimare i parametri della distribuzione normale
 parameter<- fitdistr(ut, "normal")
 parameter
+#almost 0 mean and 1 variance, we will use a N(0,1) distribution to calculate the confidence interval
 
 #one year forecast
 forecast_final <- ugarchforecast(fit_final, n.ahead = 12)
@@ -149,21 +150,21 @@ z_score <- qnorm(1 - alpha / 2, mean = 0, sd = 1)
 forecast_values_upper <- forecast_values + z_score * forecast_se
 forecast_values_lower <- forecast_values - z_score * forecast_se
 
-# De-differenziazione delle previsioni
+# De-diff
 last_value <- ts[length(ts)]
 forecast_values_de_diff <- cumsum(forecast_values) + last_value
 forecast_values_upper_de_diff <- cumsum(forecast_values_upper) + last_value
 forecast_values_lower_de_diff <- cumsum(forecast_values_lower) + last_value
 
-# Creazione della serie estesa
+#forecast plot
 extended_ts <- c(ts, forecast_values_de_diff)
 
-# Plot degli ultimi 100 lag della serie storica più i 12 periodi previsti
+i
 plot_length <- 100 + 12
 plot_start <- length(extended_ts) - plot_length + 1
 plot_end <- length(extended_ts)
 
-# Creazione del plot, i need to increase l y-axis
+
 plot(extended_ts[plot_start:plot_end], type = "l", col = "blue", ylab = "Value", xlab = "Time", ylim = c(0, 10))
 lines(c(rep(NA, 100), forecast_values_de_diff), col = "red")
 lines(c(rep(NA, 100), forecast_values_upper_de_diff), col = "green", lty = 2)
