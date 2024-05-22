@@ -8,6 +8,7 @@ remove(list = ls())
   library(zoo)
   library(readxl)
   library(rugarch)
+  library(MASS)
 }
 
 
@@ -26,6 +27,7 @@ ts <- ts(ts_raw$FEDFUNDS, start = c(as.yearmon("1954-07")), end = c(as.yearmon("
 #EDA
 autoplot(ts)
 acf(ts, lag.max = 100)
+pacf(ts, lag.max = 100)
 adf.test(ts) # p value>0.05, the time series is not stationary
 autoplot(diff(ts))
 autoplot(diff(log(ts)))
@@ -38,7 +40,7 @@ h<-5
 train<-1:750
 test<-751:836
 fit.is<-Arima(ts[train], order=c(1,1,1), include.mean = F)
-n<-length(test)-h
+n<-length(test)
 pred<-rep(NA, n)
 for (i in 1:n){
   train_up<-c(train, test[1:i])
@@ -57,12 +59,12 @@ rmse
 
 #ARMA (1,1) ON log(ts), forecast h=5
 ts_diff<-log(ts)
-adf.test(ts_diff) #not stationary
+adf.test(ts_diff) # not stationary
 h<-5
 train<-1:750
 test<-751:836
 fit.is<-Arima(ts_diff[train], order=c(1,1,1), include.mean = F)
-n<-length(test)-h
+n<-length(test)
 pred<-rep(NA, n)
 for (i in 1:n){
   train_up<-c(train, test[1:i])
@@ -97,7 +99,7 @@ autoplot(residuals(fit))
 acf(residuals(fit))
 
 #forecast
-h <- 1
+h <- 5
 n <- length(test) - h
 pred <- rep(NA, n)
 
@@ -106,11 +108,70 @@ for (i in 1:n) {
   fit_up <- ugarchfit(spec, data = ts_diff[train_up])
   forecast_up <- ugarchforecast(fit_up, n.ahead = h)
   pred[i] <- forecast_up@forecast$seriesFor[h]
-  # Rimuovi la differenziazione
+  #de-diff
   pred[i] <- ts[train_up[length(train_up)]] + pred[i]
 }
 plot(ts[test], type = "l")
 lines(pred, col = "red")
 
+
+
 rmse <- sqrt(mean((ts[test] - mean(pred))^2))
 rmse
+
+#fit final model
+fit_final <- ugarchfit(spec, data = ts_diff)
+
+#plot conditional variance
+df_diff_fit <- data.frame(time = time(ts_diff), fitted = fitted(fit_final))
+plot(abs(df_diff_fit$fitted), type = "l")
+lines(fit_final@fit$sigma, col = 2)
+
+#plot autocorrelation of (standardized) squared residuals
+acf(abs(fit_final@fit$residuals / fit_final@fit$sigma))
+plot(density(fit_final@fit$residuals / fit_final@fit$sigma))
+lines(seq(-6,6,by=0.01),dnorm(seq(-6,6,by=0.01)),col=2)
+
+ut<-fit_final@fit$residuals/fit_final@fit$sigma
+
+# Usare fitdl'istr per stimare i parametri della distribuzione normale
+parameter<- fitdistr(ut, "normal")
+parameter
+
+#one year forecast
+forecast_final <- ugarchforecast(fit_final, n.ahead = 12)
+forecast_values <- forecast_final@forecast$seriesFor
+forecast_se <- forecast_final@forecast$sigmaFor
+
+#confidence interval 95%
+alpha <- 0.05
+z_score <- qnorm(1 - alpha / 2, mean = 0, sd = 1) 
+forecast_values_upper <- forecast_values + z_score * forecast_se
+forecast_values_lower <- forecast_values - z_score * forecast_se
+
+# De-differenziazione delle previsioni
+last_value <- ts[length(ts)]
+forecast_values_de_diff <- cumsum(forecast_values) + last_value
+forecast_values_upper_de_diff <- cumsum(forecast_values_upper) + last_value
+forecast_values_lower_de_diff <- cumsum(forecast_values_lower) + last_value
+
+# Creazione della serie estesa
+extended_ts <- c(ts, forecast_values_de_diff)
+
+# Plot degli ultimi 100 lag della serie storica più i 12 periodi previsti
+plot_length <- 100 + 12
+plot_start <- length(extended_ts) - plot_length + 1
+plot_end <- length(extended_ts)
+
+# Creazione del plot, i need to increase l y-axis
+plot(extended_ts[plot_start:plot_end], type = "l", col = "blue", ylab = "Value", xlab = "Time", ylim = c(0, 10))
+lines(c(rep(NA, 100), forecast_values_de_diff), col = "red")
+lines(c(rep(NA, 100), forecast_values_upper_de_diff), col = "green", lty = 2)
+lines(c(rep(NA, 100), forecast_values_lower_de_diff), col = "green", lty = 2)
+legend("topleft", legend = c("Time Series", "Forecast", "Confidence Interval"), col = c("blue", "red", "green"), lty = c(1, 1, 2))
+
+
+
+
+
+
