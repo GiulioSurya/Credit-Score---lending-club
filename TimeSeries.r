@@ -9,6 +9,7 @@ remove(list = ls())
   library(readxl)
   library(rugarch)
   library(MASS)
+  library(fGarch)
 }
 
 
@@ -127,16 +128,18 @@ df_diff_fit <- data.frame(time = time(ts_diff), fitted = fitted(fit_final))
 plot(abs(df_diff_fit$fitted), type = "l")
 lines(fit_final@fit$sigma, col = 2)
 
-#plot autocorrelation of (standardized) squared residuals
+#plot autocorrelation of (standardized) squared residuals to compare with N(0,1)
 acf(abs(fit_final@fit$residuals / fit_final@fit$sigma))
 plot(density(fit_final@fit$residuals / fit_final@fit$sigma))
 lines(seq(-6,6,by=0.01),dnorm(seq(-6,6,by=0.01)),col=2)
 
-ut<-fit_final@fit$residuals/fit_final@fit$sigma
+ut<-fit_final@fit$residuals/fit_final@fit$sigma #this are the standardized residuals, , in this series the mean is=0
 
-# Usare fitdl'istr per stimare i parametri della distribuzione normale
-parameter<- fitdistr(ut, "normal")
-parameter
+#fit a distribution for ut
+plot(density(fit_final@fit$residuals / fit_final@fit$sigma))
+lines(seq(-6,6,by=0.01),dstd(seq(-6,6,by=0.01),0,1,3),col=2)
+
+
 #almost 0 mean and 1 variance, we will use a N(0,1) distribution to calculate the confidence interval
 
 #one year forecast
@@ -146,7 +149,7 @@ forecast_se <- forecast_final@forecast$sigmaFor
 
 #confidence interval 95%
 alpha <- 0.05
-z_score <- qnorm(1 - alpha / 2, mean = 0, sd = 1) 
+z_score <- qstd(1 - alpha / 2, mean = 0, sd = 1,nu=3) 
 forecast_values_upper <- forecast_values + z_score * forecast_se
 forecast_values_lower <- forecast_values - z_score * forecast_se
 
@@ -159,7 +162,7 @@ forecast_values_lower_de_diff <- cumsum(forecast_values_lower) + last_value
 #forecast plot
 extended_ts <- c(ts, forecast_values_de_diff)
 
-i
+
 plot_length <- 100 + 12
 plot_start <- length(extended_ts) - plot_length + 1
 plot_end <- length(extended_ts)
@@ -170,6 +173,8 @@ lines(c(rep(NA, 100), forecast_values_de_diff), col = "red")
 lines(c(rep(NA, 100), forecast_values_upper_de_diff), col = "green", lty = 2)
 lines(c(rep(NA, 100), forecast_values_lower_de_diff), col = "green", lty = 2)
 legend("topleft", legend = c("Time Series", "Forecast", "Confidence Interval"), col = c("blue", "red", "green"), lty = c(1, 1, 2))
+
+
 
 
 
