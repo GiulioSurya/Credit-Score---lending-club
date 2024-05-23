@@ -95,27 +95,38 @@ spec <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1))
 fit <- ugarchfit(spec, data = ts_diff[train])
 
 
+ut<-fit@fit$residuals/fit@fit$sigma #this are the standardized residuals, , in this series the mean is=0
+#fit a distribution for ut
+plot(density(ut))
+lines(seq(-6,6,by=0.01),dstd(seq(-6,6,by=0.01),0,1,3),col=2)
+#residual are t-student distributed with 3 degrees of freedom, we will use this to calculate the confidence interval
+
 plot(fit, which = 1)
-autoplot(residuals(fit))
-acf(residuals(fit))
+acf(ut)
 
 #forecast
-h <- 5
-n <- length(test) - h
+h<-5
+n <- length(test)
 pred <- rep(NA, n)
+up_int<-rep(NA, n)
+low_int<-rep(NA, n)
 
 for (i in 1:n) {
   train_up <- c(train, test[1:i])
-  fit_up <- ugarchfit(spec, data = ts_diff[train_up])
-  forecast_up <- ugarchforecast(fit_up, n.ahead = h)
+  fit_coef<-getspec(fit)
+  setfixed(fit_coef)<-as.list(coef(fit))
+  forecast_up <- ugarchforecast(fit_coef, data=ts[train],n.ahead = h)
   pred[i] <- forecast_up@forecast$seriesFor[h]
+  sigma <- forecast_up@forecast$sigmaFor
   #de-diff
   pred[i] <- ts[train_up[length(train_up)]] + pred[i]
+  up_int[i] <- pred[i] + qstd(0.975, nu=3) * sigma
+  low_int[i] <- pred[i] - qstd(0.975, nu=3) * sigma
 }
 plot(ts[test], type = "l")
 lines(pred, col = "red")
-
-
+lines(up_int, col = "blue", lty = 2)
+lines(low_int, col = "blue", lty = 2)
 
 rmse <- sqrt(mean((ts[test] - mean(pred))^2))
 rmse
@@ -132,15 +143,6 @@ lines(fit_final@fit$sigma, col = 2)
 acf(abs(fit_final@fit$residuals / fit_final@fit$sigma))
 plot(density(fit_final@fit$residuals / fit_final@fit$sigma))
 lines(seq(-6,6,by=0.01),dnorm(seq(-6,6,by=0.01)),col=2)
-
-ut<-fit_final@fit$residuals/fit_final@fit$sigma #this are the standardized residuals, , in this series the mean is=0
-
-#fit a distribution for ut
-plot(density(fit_final@fit$residuals / fit_final@fit$sigma))
-lines(seq(-6,6,by=0.01),dstd(seq(-6,6,by=0.01),0,1,3),col=2)
-
-
-#almost 0 mean and 1 variance, we will use a N(0,1) distribution to calculate the confidence interval
 
 #one year forecast
 forecast_final <- ugarchforecast(fit_final, n.ahead = 12)
