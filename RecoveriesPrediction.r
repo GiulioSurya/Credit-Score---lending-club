@@ -96,6 +96,19 @@ summary(lm_fit)
 vif(lm_fit)
 #plot density of residuals
 plot(density(lm_fit$residuals))
+qqPlot(lm_fit, main = "QQ plot")
+plot(lm_fit, which=1)
+# test for heteroskedasticity
+ncvTest(lm_fit)
+#compute confidence interval with robust variance estimator
+confint(lm_fit, vcov = vcovHC(lm_fit, type = "HC1"))
+
+predict_recoveries<- predict(lm_fit, newdata = dati[test,], interval = "confidence", 
+                                   vcov = vcovHC(lm_fit, type = "HC1"))
+rmse <- sqrt(mean((predict_recoveries - dati[test, "recoveries"])^2))
+rmse
+
+
 
 
 #LINEAR MODEL
@@ -103,16 +116,21 @@ lm_fit <- lm(recoveries ~ loan_amnt+term+int_rate+fico_range_low+log(total_pymnt
 debt_settlement_flag+total_rec_prncp+total_rec_int,data = dati[train,])
  summary(lm_fit)
 vif(lm_fit)
+ncvTest(lm_fit)
+#compute confidence interval with robust variance estimator
+confint(lm_fit, vcov = vcovHC(lm_fit, type = "HC1"))
+plot(density(lm_fit$residuals))
+
+qqPlot(lm_fit, main = "QQ plot")
+plot(lm_fit, which=1)
 
 
-predict_recoveries <- predict(lm_fit, newdata = dati[test,])
+predict_recoveries<- predict(lm_fit, newdata = dati[test,], interval = "confidence", 
+                                   vcov = vcovHC(lm_fit, type = "HC1"))
+
 rmse <- sqrt(mean((predict_recoveries - dati[test, "recoveries"])^2))
 rmse
 
-#DIAGNOSTIC
-qqPlot(lm_fit, main = "QQ plot")
-plot(lm_fit, which=1)
-varImp(lm_fit)
 
 
 #LASSO REGRESSION
