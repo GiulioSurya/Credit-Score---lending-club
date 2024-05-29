@@ -120,9 +120,13 @@ ncvTest(lm_fit)
 #compute confidence interval with robust variance estimator
 confint(lm_fit, vcov = vcovHC(lm_fit, type = "HC1"))
 plot(density(lm_fit$residuals))
-
 qqPlot(lm_fit, main = "QQ plot")
 plot(lm_fit, which=1)
+
+u<-lm_fit$residuals/summary(lm_fit)$sigma
+plot(density(u))
+lines(seq(-6,6,by=0.01),dstd(seq(-6,6,by=0.01),0,1,3),col=2)
+lines(seq(-6,6,by=0.01),dnorm(seq(-6,6,by=0.01),0,1),col=3)
 
 
 predict_recoveries<- predict(lm_fit, newdata = dati[test,], interval = "confidence", 
@@ -145,6 +149,9 @@ predict_recoveries <- predict(lasso_fit, newx = model.matrix(recoveries ~ ., dat
 rmse <- sqrt(mean((predict_recoveries - dati[test, "recoveries"])^2))
 rmse
 coef(lasso_fit)
+
+
+
 
 #RIDGE REGRESSION
 x <- model.matrix(recoveries ~ ., data = dati[train,])
