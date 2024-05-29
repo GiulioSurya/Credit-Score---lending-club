@@ -12,7 +12,7 @@ library(ResourceSelection)
 
 load("dati.RData")
 
-#featuring selection
+#FEATURING SELECTION
 #creating a subset:
 #dati_fit<-subset(dati, select = c("funded_amnt","term","int_rate","home_ownership",
  #                                 "annual_inc","purpose","dti","fico_range_low","open_acc","revol_util","out_prncp",
@@ -25,40 +25,31 @@ load("dati.RData")
    #                               "annual_inc","fico_range_low","open_acc","revol_util","out_prncp",
      #                             "total_pymnt","total_rec_int", "tot_cur_bal",
        #                           "open_il_24m","avg_cur_bal","bc_util","chargeoff_within_12_mths","mort_acc","default"))
-#deleted for elena and jack --> "dti" ,"application_type","tot_coll_amt","pct_tl_nvr_dlq","pub_rec_bankruptcies","tax_liens",,"total_bc_limit"
+
+#deleted "dti" ,"application_type","tot_coll_amt","pct_tl_nvr_dlq","pub_rec_bankruptcies","tax_liens",,"total_bc_limit"
 #"home_ownership","tot_hi_cred_lim","num_tl_90g_dpd_24m"
 
-#We delete non-significant variables in the logit model with 17 variables
-#We also deleted from giulio's model: annual inc, open_il_24m, bc_util, chargeoff_within_12_mths, mort_acc,"avg_cur_bal", "tot_cur_bal","open_acc"
-#Here we obtain 7 variables
+#After some trials, we decided to keep the following variables:
+#We kept 7 variables + default so 8 variables in total
 dati_fit<-subset(dati, select = c("funded_amnt","int_rate",
                                   "fico_range_low","revol_util","out_prncp",
                                   "total_pymnt","total_rec_int","default"))
+
+#We computed the correlation matrix
 cor<-cor(dati_fit[, sapply(dati_fit, is.numeric)])
 corrplot(cor(dati_fit[, sapply(dati_fit, is.numeric)]), method = "circle", type = "lower", tl.col = "black", tl.srt = 45, diag = FALSE)
 
 
 set.seed(1)
-#######TRAIN AND VALIDATION BALANCED FOR DEFAULT
-
-# i want to create a train and validation balance but with balance number of defauult==1 and default==0
-#train<-c(sample(which(dati_fit$default==1),50000),sample(which(dati_fit$default==0),50000))
-#validation<-c(sample(setdiff(which(dati_fit$default==1),train),50000),sample(setdiff(which(dati_fit$default==0),train),50000))
-#test<-setdiff(1:nrow(dati_fit),c(train,validation))
-
-
-
-#######TRAIN AND VALIDATION NOT BALANCED FOR DEFAULT
-{
-#We want to select a sub-sample of the data of 300k observation
-dati_fit<-dati_fit[sample(1:nrow(dati_fit),300000),]
-#Now we want to split data in train, test and validation: each set will have 100k observation.
+#######TRAIN, VALIDATION AND TEST FOR DEFAULT
+#Now we want to split data in train, test and validation: each set will have 1/3 of the total observations.
 train<-sample(1:nrow(dati_fit),(1/3)*nrow(dati_fit))
 test<-sample(setdiff(1:nrow(dati_fit),train),(1/3)*nrow(dati_fit))
 validation<-setdiff(setdiff(1:nrow(dati_fit),train),test)
-}
 
-
+#MODEL FITTING: choose the model you want to fit (linear, probit or logit)
+#####LINEAR MODEL#########
+fit<-lm(default~.,data=dati_fit[train,])
 
 ######PROBIT########
 fit<-glm(default~.,data=dati_fit[train,],family=binomial(link="probit"))
@@ -66,40 +57,37 @@ fit<-glm(default~.,data=dati_fit[train,],family=binomial(link="probit"))
 ####LOGISTIC######
 fit<-glm(default~.,data=dati_fit[train,],family=binomial(link="logit"))
 
-#####LINEAR MODEL#########
-fit<-lm(default~.,data=dati_fit[train,])
 
 ######SUMMARY OF THE MODEL######
 vif(fit)
 # We notice some high VIF values, but we can ignore them because we are interested in a prediction, we are not doing inference.
 summary(fit)
-PseudoR2(fit, which = "McFadden")
+PseudoR2(fit, which = "McFadden") #only for Logit and Probit
 
 #####THRESHOLD SELECTION######
 
-#######Method 1: using the best threshold from the ROC curve########
-# calculate the probability of the loan to be in default on train data
-#pred<-predict(fit,newdata=dati_fit[train,],type="response")
-# calculate the ROC curve
-#trainRoc<-roc(dati_fit[train,]$default ~ pred, plot=T, print.auc=T)
-# calculate the best treeshold
-#threshold<-coords(trainRoc, x="best", ret="threshold")
-#now predict on test data
+#######Method 1: using the best threshold from the ROC curve, maximizing the sum of sensitivity and specificity########
+#Predict on validation data
+#pred<-predict(fit,newdata=dati_fit[validation,],type="response")
+#Compute ROC curve and see AUC
+#validationRoc<-roc(dati_fit[validation,]$default ~ pred, plot=T, print.auc=T)
+#Calculate the best threshold
+#threshold<-coords(validationRoc, x="best", ret="threshold")
+#Prediction on test data
 #pred2<-predict(fit,newdata=dati_fit[test,],type="response")
-#set the treeshold
+#set the threshold
 #pred2<-ifelse(pred2>threshold$threshold,1,0)
-# create confusion matrix
+#create confusion matrix
 #table(pred2,dati_fit[test,]$default)
-#evaluate accuracy
+#Compute accuracy
 #sum(diag(table(pred2,dati_fit[test,]$default)))/sum(table(pred2,dati_fit[test,]$default))
-#table(pred2, dati_fit[test, ]$default)[2,2] / sum(table(pred2, dati_fit[test, ]$default)[,2])
 
-#######method 2: using the best threshold from the accuracy########
-#i want to try to find the best threshold using accuracy
-#threshold<-seq(0.01,0.99,0.01)
+#From now on, we choose the best threshold between 0.01 and 0.40, to ease the computation.
+#######Method 2: using the best threshold maximizing accuracy########
+#threshold<-seq(0.01,0.40,0.01)
 #accuracy<-rep(0,length(threshold))
+#pred_thre<-predict(fit,newdata=dati_fit[validation,],type="response")
 #for(i in 1:length(threshold)){
-#  pred_thre<-predict(fit,newdata=dati_fit[validation,],type="response")
 #  pred2<-ifelse(pred_thre>threshold[i],1,0)
 #  accuracy[i]<-sum(diag(table(pred2,dati_fit[validation,]$default)))/sum(table(pred2,dati_fit[validation,]$default))
 #}
@@ -107,12 +95,11 @@ PseudoR2(fit, which = "McFadden")
 #max(accuracy)
 #threshold[which(accuracy==max(accuracy))]
 
-########method 3: using the best threshold from the sensitivity########
-#i want to find a threshold but using sensitivity
-#threshold<-seq(0.01,0.99,0.01)
+########Method 3: using the best threshold maximizing sensitivity########
+#threshold<-seq(0.01,0.40,0.01)
 #sensitivity<-rep(0,length(threshold))
+#pred_thre <- predict(fit, newdata = dati_fit[validation, ], type = "response")
 #for (i in seq_along(threshold)) {
-#  pred_thre <- predict(fit, newdata = dati_fit[validation, ], type = "response")
 #  pred2 <- ifelse(pred_thre > threshold[i], 1, 0)
 #  sensitivity[i] <- table(pred2, dati_fit[validation, ]$default)[2,2] / sum(table(pred2, dati_fit[validation, ]$default)[,2])
 #}
@@ -122,78 +109,53 @@ PseudoR2(fit, which = "McFadden")
 #table(pred2,dati_fit[validation,]$default)
 
 
-########method 4: using the best threshold from the f1 score########
+########Method 4: using the best threshold maximizing F1 score########
 {
-#We want to find the threshold that optimize F1 score
 threshold<-seq(0.01,0.40,0.01)
 f1<-rep(0,length(threshold))
 sensitivity<-rep(0,length(threshold))
 precision<-rep(0,length(threshold))
+pred_thre <- predict(fit, newdata = dati_fit[validation, ], type = "response")
 for (i in seq_along(threshold)) {
-  pred_thre <- predict(fit, newdata = dati_fit[validation, ], type = "response")
   pred2 <- ifelse(pred_thre > threshold[i], 1, 0)
   sensitivity[i] <- table(pred2, dati_fit[validation, ]$default)[2,2] / sum(table(pred2, dati_fit[validation, ]$default)[,2])
   precision[i]<-table(pred2,dati_fit[validation,]$default)[2,2]/sum(table(pred2,dati_fit[validation,]$default)[2,])
   f1[i]<-2*(precision[i]*sensitivity[i])/(precision[i]+sensitivity[i])
 }
 max(f1)
-threshold[which(f1==max(f1))]
+best_thres <- threshold[which(f1==max(f1))]
 }
 
+#We choose method 4, because we want to maximize the F1 score, which is a good measure of the model's performance.
 
 
 #MODEL VALIDATION ON TEST DATA
-#nb: remember to set the threshold according to the model used
-
 pred2<-predict(fit,newdata=dati_fit[test,],type="response")
-#set the threshold
-pred2<-ifelse(pred2>0.14,1,0) #for logit, according to f1 score, threshold is 0.14
-# create confusion matrix
+#Set the threshold
+pred2<-ifelse(pred2>best_thres,1,0)
+#Create confusion matrix
 table(pred2,dati_fit[test,]$default)
-#evaluate accuracy
+#Evaluate accuracy
 accuracy<-sum(diag(table(pred2,dati_fit[test,]$default)))/sum(table(pred2,dati_fit[test,]$default))
-sensitivity<-table(pred2, dati_fit[test, ]$default)[2,2] / sum(table(pred2, dati_fit[test, ]$default)[,2])
-#compute the ROC curve
+#Compute ROC curve
 testRoc<-roc(dati_fit[test,]$default ~ pred2, plot=T, print.auc=T)
 #calculate specificity and sensitivity
 testRoc$specificities
 testRoc$sensitivities
 accuracy
-sensitivity
-# We obtained good values for accuracy and sensitivity. The ROC curve is also good.
-
-#variable importance plot with shuffling method
-#change the threshold if needed 
-{
-  accuracy <- rep(0, ncol(dati_fit) - 1)
-  for (i in seq_len(ncol(dati_fit) - 1)) {
-    for (j in seq_len(100)) {
-      dati_fit_shuffle <- dati_fit
-      dati_fit_shuffle[, i] <- sample(dati_fit_shuffle[, i])
-      pred2 <- predict(fit, newdata = dati_fit_shuffle[test, ], type = "response")
-      pred2 <- ifelse(pred2 > 0.22, 1, 0)
-      accuracy[i] <- accuracy[i] + sum(diag(table(pred2, dati_fit_shuffle[test, ]$default))) / sum(table(pred2, dati_fit_shuffle[test, ]$default))
-    }
-  }
-  accuracy <- accuracy / 100
-  barplot(accuracy, names.arg = colnames(dati_fit)[-ncol(dati_fit)], las = 2)
-}
-# We can see from the variable importance plot that the most important variables in discriminating between default and non-default loans are
-# int_rate, fico_range_low and revol_util.
 
 
-#I want to compute Brier Score for my three models in order to compare them.
-#The Brier Score is a measure of the accuracy of a probabilistic prediction.
-#It is calculated as the mean squared difference between the predicted probabilities and the observed binary outcomes.
-#The Brier Score ranges from 0 to 1, with lower values indicating better predictions.
-#Brier Score
+#We compute Brier Score for the three models in order to compare them.
+#Brier Score is calculated as the mean squared difference between predicted probabilities and observed binary outcomes.
+#Brier Score ranges from 0 to 1, with lower values indicating better predictions.
 {
   brier_score <- function(pred, obs) {
     brier_score <- mean((pred - obs)^2)
     return(brier_score)
   }
   #Logit
-  pred_logit <- predict(fit, newdata = dati_fit[test, ], type = "response")
+  fit_logit <- glm(default ~ ., data = dati_fit[train, ], family = binomial(link = "logit"))
+  pred_logit <- predict(fit_logit, newdata = dati_fit[test, ], type = "response")
   brier_score_logit <- brier_score(pred_logit, dati_fit[test, ]$default)
   #Probit
   fit_probit <- glm(default ~ ., data = dati_fit[train, ], family = binomial(link = "probit"))
@@ -209,9 +171,28 @@ sensitivity
   brier_score_linear
 }
 which.min (c(brier_score_logit, brier_score_probit, brier_score_linear))
-# We can see that the best model is the Logit one, because it has the lowest Brier Score.
+#The best model is the Logit, because it has the lowest Brier Score.
 
-# I want to do Hosmer-Lemeshow test to check the goodness of fit of the model
-# library(ResourceSelection)
-# hl <- hoslem.test(dati_fit[test, ]$default, fitted(fit))
-# hl
+
+
+
+
+#Variable importance plot in the model chosen with shuffling method 
+#We shuffle the values of each variable and compute the accuracy of the model on the test set.
+{
+  accuracy <- rep(0, ncol(dati_fit) - 1)
+  for (i in seq_len(ncol(dati_fit) - 1)) {
+    for (j in seq_len(100)) {
+      dati_fit_shuffle <- dati_fit
+      dati_fit_shuffle[, i] <- sample(dati_fit_shuffle[, i])
+      pred2 <- predict(fit, newdata = dati_fit_shuffle[test, ], type = "response")
+      pred2 <- ifelse(pred2 > best_thres, 1, 0)
+      accuracy[i] <- accuracy[i] + sum(diag(table(pred2, dati_fit_shuffle[test, ]$default))) / sum(table(pred2, dati_fit_shuffle[test, ]$default))
+    }
+  }
+  accuracy <- accuracy / 100
+  barplot(accuracy, names.arg = colnames(dati_fit)[-ncol(dati_fit)], las = 2)
+}
+# We can see from the variable importance plot that the most important variables in discriminating between default and non-default loans are
+# int_rate, fico_range_low and revol_util.
+
