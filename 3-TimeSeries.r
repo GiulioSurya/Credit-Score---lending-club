@@ -26,10 +26,10 @@ ts<-ts(ts_raw$FEDFUNDS, start = c(as.yearmon("1954-07")), end = c(as.yearmon("20
 ############EDA
 {
 autoplot(ts)
-acf(diff(ts), lag.max = 100)
-pacf(diff(ts), lag.max = 100)
-adf.test(ts) # p value>0.05. We not rejct H0: the ts is not stationary.
-#differenciating
+acf(ts, lag.max = 200)
+pacf(ts, lag.max = 200)
+adf.test(ts) # p value>0.05. We do not reject H0: the ts is not stationary.
+#So we differentiate in order to obtain a stationary ts
 autoplot(diff(ts))
 autoplot(diff(log(ts)))
 plot(stl(ts, s.window="periodic")) #no season, for economic series we don't expect any deterministic trend
@@ -80,7 +80,7 @@ rmse
 #ARMA (1,1) on log(ts) forecast h=12
 {
 ts_log<-log(ts)
-adf.test(ts_log) # p value>0.05. We not rejct H0: the ts is not stationary.
+adf.test(ts_log) # p value>0.05. We do not rejct H0: the ts is not stationary.
 h<-12
 train<-1:750
 test<-751:836
@@ -97,7 +97,7 @@ lines(pred, col="red")
 acf(residuals(fit.is))
 checkresiduals(fit.is)
 
-rmse <- sqrt(mean((ts[test[(h+1):n]] - pred[1:(n-h)]))^2)
+rmse <- sqrt(mean((ts[test[(h+1):n]] - exp(pred[1:(n-h)])))^2)
 rmse
 }
 
@@ -182,7 +182,6 @@ lines(c(rep(NA, (plot_length-12)),forecast_values), col="red", lty = 1 )
 lines(c(rep(NA, (plot_length-12)),forecast_values_upper), col = "blue", lty = 1)
 lines(c(rep(NA, (plot_length-12)),forecast_values_lower), col = "blue", lty = 1)
 legend("topleft", legend = c("TimeSeries", "Forecast", "PredictionInterval"), col = c("black", "red", "blue"), lty = c(1,2,2))
-
 
 
 
