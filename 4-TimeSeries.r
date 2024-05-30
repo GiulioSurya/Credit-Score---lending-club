@@ -26,10 +26,10 @@ ts<-ts(ts_raw$FEDFUNDS, start = c(as.yearmon("1954-07")), end = c(as.yearmon("20
 ############EDA
 {
 autoplot(ts)
-acf(ts, lag.max = 200)
-pacf(ts, lag.max = 200)
-adf.test(ts) # p value>0.05. We do not reject H0: the ts is not stationary.
-#So we differentiate in order to obtain a stationary ts
+acf(diff(ts), lag.max = 100)
+pacf(diff(ts), lag.max = 100)
+adf.test(ts) # p value>0.05. We not rejct H0: the ts is not stationary.
+#differenciating
 autoplot(diff(ts))
 autoplot(diff(log(ts)))
 plot(stl(ts, s.window="periodic")) #no season, for economic series we don't expect any deterministic trend
@@ -80,7 +80,7 @@ rmse
 #ARMA (1,1) on log(ts) forecast h=12
 {
 ts_log<-log(ts)
-adf.test(ts_log) # p value>0.05. We do not rejct H0: the ts is not stationary.
+adf.test(ts_log) # p value>0.05. We not rejct H0: the ts is not stationary.
 h<-12
 train<-1:750
 test<-751:836
@@ -97,11 +97,11 @@ lines(pred, col="red")
 acf(residuals(fit.is))
 checkresiduals(fit.is)
 
-rmse <- sqrt(mean((ts[test[(h+1):n]] - exp(pred[1:(n-h)])))^2)
+rmse <- sqrt(mean((ts[test[(h+1):n]] - (pred[1:(n-h)]))^2)
 rmse
 }
 
-#ARFIMA (1,0.8,1) + GARCH(1,1), forecast h=12 and prediction interval 95%
+#ARFIMA+GARCH, forecast h=12 and prediction interval 95%
 {
 train <- 1:750
 test <- 751:836
@@ -113,7 +113,7 @@ order<-fracdiff(ts, nar = 1, nma = 1)
 order$d
 spec <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
                    mean.model = list(armaOrder = c(1, 1), include.mean = F,arfima=T), 
-                   fixed.pars=list(arfima =order$d ), distribution.model = "std")
+                   fixed.pars=list(arfima=order$d), distribution.model = "std")
 fit <- ugarchfit(spec, data = ts[train])
 
 ut<-fit@fit$residuals/fit@fit$sigma #standardized residuals
@@ -125,7 +125,7 @@ lines(seq(-6,6,by=0.01),dstd(seq(-6,6,by=0.01),0,1,4),col=2)
 acf(abs(ut)) #there is no more autocorrelation
 
 #FORECAST + PREDICTION INTERVAL 95%
-h<-12
+h<-12	
 n <- length(test)
 pred <- rep(NA, n) #86 prediction, from 763
 up_int<-rep(NA, n)
@@ -134,7 +134,6 @@ low_int<-rep(NA, n)
 #we used fixed coefficients to ease the computation
 fit_coef<-getspec(fit)
 setfixed(fit_coef)<-as.list(coef(fit))
-
 for (i in 1:n) {
   train_up <- c(train, test[1:i])
   forecast_up <- ugarchforecast(fit_coef, data=ts[train_up],n.ahead = h)
@@ -143,16 +142,27 @@ for (i in 1:n) {
   up_int[i] <- pred[i] + qstd(0.975, mean=0, sd=1,nu=4) * sigma 
   low_int[i] <- pred[i] - qstd(0.975, mean=0, sd=1,nu=4) * sigma
 }
-plot(ts[test], type = "l")
-lines(pred, col = "red")
-lines(up_int, col = "blue", lty = 2)
-lines(low_int, col = "blue", lty = 2)
-
 rmse <- sqrt(mean((ts[test[(h+1):n]] - pred[1:(n-h)]))^2)
 rmse
+
+#plot:
+plot(ts[test], type = "l", ylim=c(-1,6), xaxt="n", xlab="Date", ylab="FED interest rate",
+     main="Actual vs Predicted Time Series")
+polygon(c(seq_along(up_int), rev(seq_along(low_int))),
+        c(up_int, rev(low_int)), col = "#C6E9F9", border = NA)
+lines(ts[test], type = "l", col = "black", lwd=2.5)
+lines(pred, col = "red", lwd=1.5)
+lines(up_int, col = "blue", lty = 2)
+lines(low_int, col = "blue", lty = 2)
+dates <- seq(from=as.Date("1954-07-01"), to=as.Date("2025-12-01"), by = "month")
+dates <- format(dates, "%Y-%m")
+axis(1, at = seq(1, length(dates[test]), by=12), 
+     labels = dates[test][seq(1, length(dates[test]), by =12)])
+legend("topleft", legend = c("Actual", "Predicted", "Prediction Interval"), col = c("black", "red", "blue"), lty = c(1, 1, 2))
 }
 
-##############################################
+#FORECAST IN THE FUTURE WITH ARFIMA+GARCH
+{
 #fit final model on overall time series
 fit_final <- ugarchfit(spec, data = ts)
 
@@ -173,16 +183,19 @@ forecast_values_upper <- forecast_values + q * forecast_se
 forecast_values_lower <- forecast_values - q * forecast_se
 
 #plot last values of the time series, the future forecast and the prediction interval
-plot_length <- 12
+plot_length <- 36
 plot_start <- length(ts) - (plot_length-12)
 plot_end <- length(ts) + 12 #848, so 12 months after the end of ts
 
-plot(ts[plot_start:plot_end], type="l", ylim=c(5.2, 5.6))
-lines(c(rep(NA, (plot_length-12)),forecast_values), col="red", lty = 1 )
-lines(c(rep(NA, (plot_length-12)),forecast_values_upper), col = "blue", lty = 1)
-lines(c(rep(NA, (plot_length-12)),forecast_values_lower), col = "blue", lty = 1)
-legend("topleft", legend = c("TimeSeries", "Forecast", "PredictionInterval"), col = c("black", "red", "blue"), lty = c(1,2,2))
-
-
-
-
+plot(ts[plot_start:plot_end], type="l", ylim=c(0, 5.6), lwd=1.5, xaxt="n", xlab="Date", ylab="FED interest rate",
+     main="Forecast and Prediction Interval in the future")
+polygon(c((plot_length-12+1):plot_length, rev((plot_length-12+1):plot_length)),
+        c(forecast_values_upper, rev(forecast_values_lower)),
+        col = "#C6E9F9", border = NA)
+lines(c(rep(NA, (plot_length-12)),forecast_values), col="red", lty = 1, lwd=1.5)
+lines(c(rep(NA, (plot_length-12)),forecast_values_upper), col = "blue", lty = 2, lwd=1.5)
+lines(c(rep(NA, (plot_length-12)),forecast_values_lower), col = "blue", lty = 2, lwd=1.5)
+axis(1, at = seq(1, length(dates[plot_start:plot_end]), by=6), 
+     labels = dates[plot_start:plot_end][seq(1, length(dates[plot_start:plot_end]), by =6)])
+legend("bottomright", legend = c("TimeSeries", "Forecast", "Prediction Interval"), col = c("black", "red", "blue"), lty = c(1,2,2), lwd=c(2,2,2))
+}
