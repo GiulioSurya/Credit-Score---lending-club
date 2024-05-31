@@ -11,7 +11,7 @@ Additionally, when a new client applies for a loan, it is crucial for LC to deci
 
 # [DATA](https://www.kaggle.com/datasets/shawnysun/loan-data-for-credit-risk-modeling)
 
-# (in progress)
+# [REPORT](https://drive.google.com/file/d/1_uOjEDsGPBYyTFAZqkyKiJLSNh8u4BrP/view?usp=sharing)
 
 
 
