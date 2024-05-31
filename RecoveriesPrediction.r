@@ -42,9 +42,6 @@ dati$revol_util<-as.numeric(gsub("%","",dati$revol_util))
 dati$int_rate<-as.numeric(gsub("%","",dati$int_rate))
 #transform all character variable in factor
 dati<-dati %>% mutate_if(is.character, as.factor)
-#winzorize the variable recoveries to 95 percentile
-recoveries_95<-quantile(dati$recoveries,0.95)
-dati$recoveries[dati$recoveries>recoveries_95]<-recoveries_95
 }
 
 
@@ -53,8 +50,6 @@ dati$recoveries[dati$recoveries>recoveries_95]<-recoveries_95
 dati<-subset(dati, select=-c(X,id,issue_d,grade,sub_grade,emp_title,url,
 purpose,zip_code,fico_range_high,initial_list_status,last_fico_range_high,
 last_fico_range_low,out_prncp_inv,out_prncp,addr_state, funded_amnt,collection_recovery_fee,total_pymnt_inv,funded_amnt_inv))
-
-
 #REMOVE VARIABLE WITH ONE MODALITY
 dati<-subset(dati, select = -c(policy_code, application_type,pymnt_plan, earliest_cr_line,last_pymnt_d, last_credit_pull_d, hardship_flag))# these are factor variable with only one modality or date
 
@@ -99,7 +94,6 @@ predict_recoveries<- predict(lm_fit, newdata = dati[test,], interval = "confiden
                                    vcov = vcovHC(lm_fit, type = "HC1"))
 
 #rmse 
-
 rmse <- sqrt(mean((exp(predict_recoveries) - dati[test, "recoveries"]))^2)
 rmse
 
@@ -109,7 +103,6 @@ rmse
 lm_fit <- lm(log(recoveries) ~ loan_amnt+term+int_rate+fico_range_low+log(total_pymnt)+tot_cur_bal+mort_acc+num_bc_sats+num_bc_tl+
 debt_settlement_flag+total_rec_prncp+total_rec_int+total_rec_late_fee,data = dati[train,])
 summary(lm_fit)
-summary(dati$total_pymnt)
 vif(lm_fit)
 ncvTest(lm_fit)
 #compute confidence interval with robust variance estimator
@@ -118,18 +111,54 @@ plot(density(lm_fit$residuals))
 qqPlot(lm_fit, main = "QQ plot")
 plot(lm_fit, which=1)
 
-u<-lm_fit$residuals/summary(lm_fit)$sigma
-plot(density(u))
+plot(density(lm_fit$residuals))
 
 predict_recoveries<- predict(lm_fit, newdata = dati[test,], interval = "confidence", 
-                                   vcov = vcovHC(lm_fit, type = "HC1"))
-summary(predict_recoveries)
-
+                                  vcov = vcovHC(lm_fit, type = "HC1"))
 rmse <- sqrt(mean((exp(predict_recoveries) - dati[test, "recoveries"]))^2)
 rmse
 
 
+#try to fit a gamma distribution
+#log likelihood function
+llk_gamma <- function(params, data) {
+  alpha <- params[1]
+  beta <- params[2]
+  n <- length(data)
+  log_likelihood <- n * (alpha * log(beta) - log(gamma(alpha))) + 
+                    (alpha - 1) * sum(log(data)) - beta * sum(data)
+  return(log_likelihood)
+}
 
+#optim and estimate of parameters
+fit <- optim(c(1, 2), function(params) -llk_gamma(params, dati$recoveries),
+             method = "L-BFGS-B", lower = c(0.001, 0.001))
+fit$par
+alpha_est <- fit$par[1]
+beta_est <- fit$par[2]
+
+#check distribution
+plot(density(dati$recoveries), main = "Density of recoveries")
+curve(dgamma(x, shape = alpha_est, rate = beta_est), add = TRUE, col = "red")
+
+#fit a glm with gamma distribution
+gamma_fit <- glm(recoveries ~ loan_amnt+ term+ 
+             int_rate + installment + verification_status+ 
+             title+ fico_range_low + log(total_pymnt)+ 
+             total_rec_prncp + total_rec_int + total_rec_late_fee + last_pymnt_amnt
+             + debt_settlement_flag, data = dati[train,], family = Gamma(link = "log"))
+summary(gamma_fit)
+vif(gamma_fit)
+predict_recoveries <- predict(gamma_fit, newdata = dati[test,], type = "response")
+rmse <- sqrt(mean((predict_recoveries - dati[test, "recoveries"])^2))
+rmse
+deviance_residuals <- residuals(gamma_fit, type = "deviance")
+plot(density(deviance_residuals))
+lines(seq(-5, 5, 0.1), dnorm(seq(-5, 5, 0.1),0,1), col = "red")
+
+plot(gamma_fit, which = 1)
+plot(gamma_fit, which = 2)
+plot(gamma_fit, which = 3)
 
 
 x <- model.matrix(log(recoveries) ~ ., data = dati[train,])[,-1]
@@ -145,20 +174,10 @@ predict_recoveries <- predict(best_model, newx = model.matrix(log(recoveries) ~ 
 rmse <- sqrt(mean((predict_recoveries - dati[test, "recoveries"])^2))
 rmse
 
+#plot residuals vs fitted
+plot(predict_recoveries, dati[test, "recoveries"] - predict_recoveries, xlab = "Fitted values", ylab = "Residuals")
 
 
 
-#RIDGE REGRESSION
-x <- model.matrix(log(recoveries) ~ ., data = dati[train,])
-y <- dati[train, "recoveries"]
-ridge_fit <- cv.glmnet(x, y, alpha = 0, nfolds = 10)
-plot(ridge_fit)
-cv.err <- cv.glmnet(x, y, alpha = 0)
-best_lambda <- cv.err$lambda.1se
-best_lambda
-ridge_fit <- glmnet(x, y, alpha = 0, lambda = best_lambda)
-predict_recoveries <- predict(ridge_fit, newx = model.matrix(log(recoveries) ~ ., data = dati[test,]))
-rmse <- sqrt(mean((predict_recoveries - dati[test, "recoveries"])^2))
-rmse
-coef(ridge_fit)
+
 
