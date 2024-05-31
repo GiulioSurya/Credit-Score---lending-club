@@ -97,7 +97,7 @@ lines(pred, col="red")
 acf(residuals(fit.is))
 checkresiduals(fit.is)
 
-rmse <- sqrt(mean((ts[test[(h+1):n]] - (pred[1:(n-h)]))^2)
+rmse <- sqrt(mean((ts[test[(h+1):n]] - (pred[1:(n-h)]))^2))
 rmse
 }
 
@@ -146,7 +146,7 @@ rmse <- sqrt(mean((ts[test[(h+1):n]] - pred[1:(n-h)]))^2)
 rmse
 
 #plot:
-plot(ts[test], type = "l", ylim=c(-1,6), xaxt="n", xlab="Date", ylab="FED interest rate",
+plot(ts[test], type = "l", ylim=c(0,6), xaxt="n", xlab="Date", ylab="FED interest rate",
      main="Actual vs Predicted Time Series")
 polygon(c(seq_along(up_int), rev(seq_along(low_int))),
         c(up_int, rev(low_int)), col = "#C6E9F9", border = NA)
