@@ -7,6 +7,10 @@ remove(list = ls())
   library(glmnet)
   library(boot)
   library(DHARMa)
+<<<<<<< HEAD
+=======
+  library(DescTools)
+>>>>>>> 82a8945f8a8bbb31b5d5627f9682ad700c633508
 }
 
 load("dati_raw.RData")
@@ -53,13 +57,22 @@ dati <- dati[dati$recoveries > 0,]
 }
 
 #FITTING THE MODEL
+<<<<<<< HEAD
 
 #STEPWISE FORWARD SELECTION
 {
+=======
+>>>>>>> 82a8945f8a8bbb31b5d5627f9682ad700c633508
 set.seed(12)
 train<-sample(1:nrow(dati),0.7*nrow(dati))
 test<-setdiff(1:nrow(dati),train)
 
+<<<<<<< HEAD
+=======
+
+#STEPWISE FORWARD SELECTION
+{
+>>>>>>> 82a8945f8a8bbb31b5d5627f9682ad700c633508
 stepwise_fit <- regsubsets(log(recoveries) ~ ., data = dati[train,], nvmax = 30, 
                            really.big = TRUE, method="forward")
 summary(stepwise_fit)$bic
@@ -130,7 +143,11 @@ coef(best_model)
 predict_recoveries <- predict(best_model, newx = model.matrix(recoveries ~ ., data = dati[test,])[,-1])
 rmse <- sqrt(mean((predict_recoveries - dati[test, "recoveries"])^2))
 rmse
+<<<<<<< HEAD
 summary(predict_recoveries)
+=======
+summary(predict_recoveries) #no negative prediction!!!
+>>>>>>> 82a8945f8a8bbb31b5d5627f9682ad700c633508
 #plot residuals vs fitted
 plot(predict_recoveries, dati[test, "recoveries"] - predict_recoveries, 
      xlab = "Fitted values", ylab = "Residuals")
@@ -169,6 +186,10 @@ gamma_fit <- glm(recoveries ~ loan_amnt+ term+ int_rate + verification_status+
                  family = Gamma(link = "log"))
 summary(gamma_fit)
 vif(gamma_fit)
+<<<<<<< HEAD
+=======
+PseudoR2(gamma_fit, which = "McFadden")
+>>>>>>> 82a8945f8a8bbb31b5d5627f9682ad700c633508
 predict_recoveries <- predict(gamma_fit, newdata = dati[test,], type = "response")
 rmse <- sqrt(mean((predict_recoveries - dati[test, "recoveries"])^2))
 rmse
