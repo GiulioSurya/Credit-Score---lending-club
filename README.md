@@ -4,7 +4,7 @@ For clients in default, we are also interested in producing a model to predict t
 
 Additionally, when a new client applies for a loan, it is crucial for LC to decide the appropriate interest rate to apply. To achieve this, we aim to forecast the Federal Reserve Bank (FED) interest rate for the upcoming months, which is crucial for several reasons. Firstly, it impacts both debtors and investors behaviour influencing borrowing trends and it also directly affects our institution's borrowing costs, guiding our loan interest rate decisions in order to maintain profitability. Lastly, FED rates are linked to broader economic factors like inflation, employment, and economic growth, aiding informed decision-making aligned with macroeconomic conditions.
 
-# [DATA](https://www.kaggle.com/datasets/shawnysun/loan-data-for-credit-risk-modeling)
+# [DATA](https://www.kaggle.com/datasets/ethon0426/lending-club-20072020q1/data)
 
 # [REPORT](https://drive.google.com/file/d/1_uOjEDsGPBYyTFAZqkyKiJLSNh8u4BrP/view?usp=sharing)
 
